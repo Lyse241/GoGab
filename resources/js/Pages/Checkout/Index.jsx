@@ -3,7 +3,6 @@ import { useCart } from '@/Contexts/CartContext';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { formatPrice } from '@/utils/format';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
 
 const LANDMARKS_MAX = 500;
 
@@ -86,9 +85,7 @@ function OrderSummary({ cart }) {
 export default function Index({ neighborhoods, paymentMethods }) {
     const cart = useCart();
     const { user } = usePage().props.auth;
-    const [notice, setNotice] = useState(null);
-
-    const { data, setData, errors, setError, clearErrors, processing } = useForm({
+    const { data, setData, errors, setError, clearErrors, processing, post, transform } = useForm({
         neighborhood_id: '',
         address_landmarks: '',
         payment_method: '',
@@ -97,7 +94,6 @@ export default function Index({ neighborhoods, paymentMethods }) {
     const update = (field, value) => {
         setData(field, value);
         clearErrors(field);
-        setNotice(null);
     };
 
     const submit = (e) => {
@@ -113,11 +109,25 @@ export default function Index({ neighborhoods, paymentMethods }) {
             return;
         }
 
-        // TODO prompt 4.2 : envoyer la commande au serveur (post vers orders.store).
-        setNotice(
-            "Formulaire valide. L'enregistrement de la commande sera branché à l'étape suivante.",
-        );
+        // Seuls les identifiants et quantités sont envoyés : le serveur relit les prix.
+        transform((formData) => ({
+            ...formData,
+            items: cart.items.map((item) => ({
+                product_id: item.product_id,
+                quantity: item.quantity,
+            })),
+        }));
+
+        post(route('orders.store'), {
+            // Panier vidé seulement une fois la commande enregistrée.
+            onSuccess: () => cart.clearCart(),
+        });
     };
+
+    // Erreurs serveur liées au panier (panier vide, produit supprimé, plusieurs boutiques…).
+    const cartError =
+        errors.items ??
+        Object.entries(errors).find(([key]) => key.startsWith('items.'))?.[1];
 
     if (cart.items.length === 0) {
         return (
@@ -253,13 +263,16 @@ export default function Index({ neighborhoods, paymentMethods }) {
                         </p>
                     </Section>
 
-                    {notice && (
-                        <p
-                            role="status"
-                            className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+                    {cartError && (
+                        <div
+                            role="alert"
+                            className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
                         >
-                            {notice}
-                        </p>
+                            {cartError}{' '}
+                            <Link href={route('cart')} className="font-medium underline">
+                                Voir mon panier
+                            </Link>
+                        </div>
                     )}
 
                     <button
@@ -267,7 +280,9 @@ export default function Index({ neighborhoods, paymentMethods }) {
                         disabled={processing}
                         className="w-full rounded-full bg-emerald-600 py-3 font-semibold text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-50"
                     >
-                        Confirmer la commande · {formatPrice(cart.total)}
+                        {processing
+                            ? 'Envoi en cours…'
+                            : `Confirmer la commande · ${formatPrice(cart.total)}`}
                     </button>
                 </div>
             </form>

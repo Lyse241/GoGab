@@ -2,12 +2,31 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
+    public const STATUS_PENDING = 'en_attente';
+
+    public const STATUS_ACCEPTED = 'acceptee';
+
+    public const STATUS_DELIVERING = 'en_livraison';
+
+    public const STATUS_DELIVERED = 'livree';
+
+    /**
+     * Statuts de commande (valeur enregistrée => libellé affiché).
+     */
+    public const STATUSES = [
+        self::STATUS_PENDING => 'En attente',
+        self::STATUS_ACCEPTED => 'Acceptée',
+        self::STATUS_DELIVERING => 'En cours de livraison',
+        self::STATUS_DELIVERED => 'Livrée',
+    ];
+
     /**
      * Modes de paiement proposés (valeur enregistrée => libellé affiché).
      * Aucun paiement réel n'est intégré : seul le choix est enregistré.
@@ -43,6 +62,14 @@ class Order extends Model
         return [
             'total_price' => 'decimal:2',
         ];
+    }
+
+    /**
+     * Numéro lisible de la commande, ex. "GOG-00042".
+     */
+    protected function number(): Attribute
+    {
+        return Attribute::get(fn () => 'GOG-'.str_pad((string) $this->id, 5, '0', STR_PAD_LEFT));
     }
 
     public function client(): BelongsTo

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StoreController;
 use Illuminate\Http\Request;
@@ -15,9 +16,11 @@ Route::get('/stores/{store}', [StoreController::class, 'show'])->name('stores.sh
 Route::get('/cart', fn () => Inertia::render('Cart/Index'))->name('cart');
 
 // Commande réservée aux clients connectés.
-Route::get('/checkout', [CheckoutController::class, 'create'])
-    ->middleware(['auth', 'role:client'])
-    ->name('checkout');
+Route::middleware(['auth', 'role:client'])->group(function () {
+    Route::get('/checkout', [CheckoutController::class, 'create'])->name('checkout');
+    Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
+    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+});
 
 // Point d'entrée après connexion / inscription : renvoie chaque rôle vers son espace.
 Route::get('/dashboard', function (Request $request) {
