@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StoreController;
 use Illuminate\Http\Request;
@@ -13,8 +14,8 @@ Route::get('/stores/{store}', [StoreController::class, 'show'])->name('stores.sh
 // Panier : contenu géré côté React (localStorage), la page n'a besoin d'aucune donnée serveur.
 Route::get('/cart', fn () => Inertia::render('Cart/Index'))->name('cart');
 
-// Commande réservée aux clients connectés (page provisoire jusqu'à l'étape 4).
-Route::get('/checkout', fn () => Inertia::render('Checkout/Index'))
+// Commande réservée aux clients connectés.
+Route::get('/checkout', [CheckoutController::class, 'create'])
     ->middleware(['auth', 'role:client'])
     ->name('checkout');
 

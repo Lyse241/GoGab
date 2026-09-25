@@ -9,6 +9,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Order extends Model
 {
     /**
+     * Modes de paiement proposés (valeur enregistrée => libellé affiché).
+     * Aucun paiement réel n'est intégré : seul le choix est enregistré.
+     */
+    public const PAYMENT_METHODS = [
+        'airtel_money' => 'Airtel Money',
+        'moov_money' => 'Moov Money',
+        'cash_on_delivery' => 'Paiement à la livraison',
+    ];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
