@@ -31,11 +31,12 @@ export default function PublicLayout({ children }) {
                                 <Link href={route('profile.edit')} className={linkClass}>
                                     Mon compte
                                 </Link>
+                                {/* Sur mobile, la déconnexion se fait depuis « Mon compte » (manque de place). */}
                                 <Link
                                     href={route('logout')}
                                     method="post"
                                     as="button"
-                                    className={linkClass}
+                                    className={`hidden sm:inline-block ${linkClass}`}
                                 >
                                     Déconnexion
                                 </Link>

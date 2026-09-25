@@ -1,3 +1,4 @@
+import LazyImage from '@/Components/LazyImage';
 import QuantityStepper from '@/Components/QuantityStepper';
 import { useCart } from '@/Contexts/CartContext';
 import PublicLayout from '@/Layouts/PublicLayout';
@@ -7,16 +8,11 @@ import { Head, Link } from '@inertiajs/react';
 function CartLine({ item, onQuantityChange, onRemove }) {
     return (
         <li className="flex gap-3 py-4">
-            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-gray-200">
-                {item.image && (
-                    <img
-                        src={imageUrl(item.image)}
-                        alt={item.name}
-                        loading="lazy"
-                        className="h-full w-full object-cover"
-                    />
-                )}
-            </div>
+            <LazyImage
+                src={imageUrl(item.image)}
+                alt={item.name}
+                className="h-20 w-20 shrink-0 rounded-lg"
+            />
 
             <div className="flex min-w-0 flex-1 flex-col">
                 <div className="flex items-start justify-between gap-2">

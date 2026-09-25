@@ -1,3 +1,4 @@
+import Spinner from '@/Components/Spinner';
 import StatusBadge from '@/Components/StatusBadge';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatPrice } from '@/utils/format';
@@ -109,9 +110,16 @@ function ActionButton({ onClick, busy, variant = 'primary', children }) {
             type="button"
             onClick={onClick}
             disabled={busy}
-            className={`w-full rounded-full py-2.5 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 ${styles[variant]}`}
+            aria-busy={busy}
+            className={`inline-flex w-full items-center justify-center gap-2 rounded-full py-2.5 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 ${styles[variant]}`}
         >
-            {busy ? 'Envoi…' : children}
+            {busy ? (
+                <>
+                    <Spinner /> Envoi…
+                </>
+            ) : (
+                children
+            )}
         </button>
     );
 }

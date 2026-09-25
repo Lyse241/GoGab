@@ -1,4 +1,5 @@
 import ConfirmDeleteButton from '@/Components/ConfirmDeleteButton';
+import FormErrors, { focusFirstError } from '@/Components/FormErrors';
 import ImageField from '@/Components/ImageField';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
@@ -81,6 +82,7 @@ export default function Form({ store, products, categories }) {
             preserveScroll: true,
             forceFormData: true,
             onSuccess: () => reset('image'),
+            onError: focusFirstError,
         });
     };
 
@@ -106,6 +108,7 @@ export default function Form({ store, products, categories }) {
                     onSubmit={submit}
                     className="space-y-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200 sm:p-6"
                 >
+                    <FormErrors errors={errors} />
                     <div>
                         <InputLabel htmlFor="name" value="Nom de la boutique" />
                         <TextInput
@@ -146,7 +149,7 @@ export default function Form({ store, products, categories }) {
                     />
 
                     <div className="flex items-center justify-end gap-4">
-                        <PrimaryButton disabled={processing}>
+                        <PrimaryButton processing={processing}>
                             {isEdit ? 'Enregistrer' : 'Créer la boutique'}
                         </PrimaryButton>
                     </div>

@@ -1,3 +1,4 @@
+import FormErrors, { focusFirstError } from '@/Components/FormErrors';
 import ImageField from '@/Components/ImageField';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
@@ -24,7 +25,7 @@ export default function Form({ store, product }) {
             isEdit
                 ? route('admin.products.update', product.id)
                 : route('admin.stores.products.store', store.id),
-            { forceFormData: true },
+            { forceFormData: true, onError: focusFirstError },
         );
     };
 
@@ -53,6 +54,7 @@ export default function Form({ store, product }) {
                     onSubmit={submit}
                     className="space-y-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200 sm:p-6"
                 >
+                    <FormErrors errors={errors} />
                     <div>
                         <InputLabel htmlFor="name" value="Nom du produit" />
                         <TextInput
@@ -108,7 +110,7 @@ export default function Form({ store, product }) {
                     />
 
                     <div className="flex items-center justify-end">
-                        <PrimaryButton disabled={processing}>
+                        <PrimaryButton processing={processing}>
                             {isEdit ? 'Enregistrer' : 'Ajouter le produit'}
                         </PrimaryButton>
                     </div>

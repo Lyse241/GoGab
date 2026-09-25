@@ -1,4 +1,6 @@
+import FormErrors, { focusFirstError } from '@/Components/FormErrors';
 import InputError from '@/Components/InputError';
+import Spinner from '@/Components/Spinner';
 import { useCart } from '@/Contexts/CartContext';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { formatPrice } from '@/utils/format';
@@ -121,6 +123,7 @@ export default function Index({ neighborhoods, paymentMethods }) {
         post(route('orders.store'), {
             // Panier vidé seulement une fois la commande enregistrée.
             onSuccess: () => cart.clearCart(),
+            onError: focusFirstError,
         });
     };
 
@@ -275,14 +278,21 @@ export default function Index({ neighborhoods, paymentMethods }) {
                         </div>
                     )}
 
+                    <FormErrors errors={cartError ? {} : errors} />
+
                     <button
                         type="submit"
                         disabled={processing}
+                        aria-busy={processing}
                         className="w-full rounded-full bg-primary-600 py-3 font-semibold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50"
                     >
-                        {processing
-                            ? 'Envoi en cours…'
-                            : `Confirmer la commande · ${formatPrice(cart.total)}`}
+                        {processing ? (
+                            <span className="inline-flex items-center justify-center gap-2">
+                                <Spinner /> Envoi de la commande…
+                            </span>
+                        ) : (
+                            `Confirmer la commande · ${formatPrice(cart.total)}`
+                        )}
                     </button>
                 </div>
             </form>

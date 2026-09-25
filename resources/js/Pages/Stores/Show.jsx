@@ -1,3 +1,4 @@
+import LazyImage from '@/Components/LazyImage';
 import Modal from '@/Components/Modal';
 import QuantityStepper from '@/Components/QuantityStepper';
 import { useCart } from '@/Contexts/CartContext';
@@ -9,16 +10,11 @@ import { useState } from 'react';
 function ProductCard({ product, quantity, onAdd, onQuantityChange }) {
     return (
         <article className="flex gap-4 rounded-xl bg-white p-3 shadow-sm ring-1 ring-gray-200">
-            <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-gray-200">
-                {product.image && (
-                    <img
-                        src={imageUrl(product.image)}
-                        alt={product.name}
-                        loading="lazy"
-                        className="h-full w-full object-cover"
-                    />
-                )}
-            </div>
+            <LazyImage
+                src={imageUrl(product.image)}
+                alt={product.name}
+                className="h-24 w-24 shrink-0 rounded-lg"
+            />
             <div className="flex min-w-0 flex-1 flex-col">
                 <h3 className="font-semibold text-gray-900">{product.name}</h3>
                 {product.description && (

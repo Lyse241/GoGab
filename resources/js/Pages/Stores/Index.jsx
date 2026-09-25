@@ -1,3 +1,4 @@
+import LazyImage from '@/Components/LazyImage';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { imageUrl } from '@/utils/format';
 import { Head, Link } from '@inertiajs/react';
@@ -26,16 +27,11 @@ function StoreCard({ store }) {
             href={route('stores.show', store.id)}
             className="group block overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200 transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
-            <div className="aspect-[3/2] bg-gray-200">
-                {store.image && (
-                    <img
-                        src={imageUrl(store.image)}
-                        alt={store.name}
-                        loading="lazy"
-                        className="h-full w-full object-cover transition group-hover:scale-[1.02]"
-                    />
-                )}
-            </div>
+            <LazyImage
+                src={imageUrl(store.image)}
+                alt={store.name}
+                className="aspect-[3/2]"
+            />
             <div className="p-4">
                 <h3 className="font-semibold text-gray-900">{store.name}</h3>
                 <p className="mt-1 flex items-center justify-between text-sm text-gray-500">
@@ -71,7 +67,7 @@ export default function Index({ stores, categories }) {
             </section>
 
             {/* Filtres : défilement horizontal sur mobile */}
-            <div className="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:flex-wrap sm:px-0">
+            <div className="no-scrollbar -mx-4 mt-5 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:flex-wrap sm:px-0">
                 <CategoryChip active={selected === null} onClick={() => setSelected(null)}>
                     Tout
                 </CategoryChip>

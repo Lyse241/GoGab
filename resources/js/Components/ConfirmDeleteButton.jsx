@@ -1,4 +1,5 @@
 import Modal from '@/Components/Modal';
+import Spinner from '@/Components/Spinner';
 import { router } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -46,8 +47,10 @@ export default function ConfirmDeleteButton({ url, title, message, className = '
                             type="button"
                             onClick={confirm}
                             disabled={processing}
-                            className="rounded-full bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                            aria-busy={processing}
+                            className="inline-flex items-center justify-center gap-2 rounded-full bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
                         >
+                            {processing && <Spinner />}
                             Supprimer définitivement
                         </button>
                     </div>

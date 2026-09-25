@@ -1,3 +1,4 @@
+import FormErrors, { focusFirstError } from '@/Components/FormErrors';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
@@ -19,16 +20,18 @@ export default function Register() {
 
         post(route('register'), {
             onFinish: () => reset('password', 'password_confirmation'),
+            onError: focusFirstError,
         });
     };
 
     return (
         <GuestLayout>
-            <Head title="Register" />
+            <Head title="Inscription" />
 
             <form onSubmit={submit}>
+                <FormErrors errors={errors} className="mb-4" />
                 <div>
-                    <InputLabel htmlFor="name" value="Name" />
+                    <InputLabel htmlFor="name" value="Nom" />
 
                     <TextInput
                         id="name"
@@ -45,7 +48,7 @@ export default function Register() {
                 </div>
 
                 <div className="mt-4">
-                    <InputLabel htmlFor="email" value="Email" />
+                    <InputLabel htmlFor="email" value="E-mail" />
 
                     <TextInput
                         id="email"
@@ -80,7 +83,7 @@ export default function Register() {
                 </div>
 
                 <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
+                    <InputLabel htmlFor="password" value="Mot de passe" />
 
                     <TextInput
                         id="password"
@@ -99,7 +102,7 @@ export default function Register() {
                 <div className="mt-4">
                     <InputLabel
                         htmlFor="password_confirmation"
-                        value="Confirm Password"
+                        value="Confirmer le mot de passe"
                     />
 
                     <TextInput
@@ -126,11 +129,11 @@ export default function Register() {
                         href={route('login')}
                         className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                     >
-                        Already registered?
+                        Déjà inscrit ?
                     </Link>
 
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Register
+                    <PrimaryButton className="ms-4" processing={processing}>
+                        S'inscrire
                     </PrimaryButton>
                 </div>
             </form>
