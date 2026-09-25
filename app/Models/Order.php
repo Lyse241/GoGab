@@ -28,6 +28,14 @@ class Order extends Model
     ];
 
     /**
+     * Progression du livreur : statut actuel => statut suivant.
+     */
+    public const NEXT_STATUS = [
+        self::STATUS_ACCEPTED => self::STATUS_DELIVERING,
+        self::STATUS_DELIVERING => self::STATUS_DELIVERED,
+    ];
+
+    /**
      * Modes de paiement proposés (valeur enregistrée => libellé affiché).
      * Aucun paiement réel n'est intégré : seul le choix est enregistré.
      */

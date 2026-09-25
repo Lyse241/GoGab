@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StoreController;
@@ -27,8 +28,10 @@ Route::get('/dashboard', function (Request $request) {
     return redirect()->route($request->user()->homeRoute());
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::middleware(['auth', 'role:delivery'])->prefix('delivery')->name('delivery.')->group(function () {
-    Route::get('/dashboard', fn () => Inertia::render('Delivery/Dashboard'))->name('dashboard');
+Route::middleware(['auth', 'role:delivery'])->group(function () {
+    Route::get('/delivery/dashboard', [DeliveryController::class, 'dashboard'])->name('delivery.dashboard');
+    Route::post('/delivery/orders/{order}/accept', [DeliveryController::class, 'accept'])->name('delivery.orders.accept');
+    Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.status.update');
 });
 
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {

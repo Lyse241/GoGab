@@ -1,28 +1,238 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, usePage } from '@inertiajs/react';
+import { formatPrice } from '@/utils/format';
+import { Head, router, usePoll } from '@inertiajs/react';
+import { useState } from 'react';
 
-export default function Dashboard() {
-    const { user } = usePage().props.auth;
+const REFRESH_INTERVAL = 30000; // 30 s : nouvelles commandes sans recharger la page
+
+const statusStyles = {
+    acceptee: 'bg-blue-100 text-blue-800',
+    en_livraison: 'bg-amber-100 text-amber-800',
+};
+
+// Libellé du bouton selon l'étape suivante.
+const nextStepLabels = {
+    en_livraison: 'Démarrer la livraison',
+    livree: 'Marquer comme livrée',
+};
+
+function OrderCard({ order, children }) {
+    const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+
+    return (
+        <article className="flex flex-col rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
+            <div className="flex items-start justify-between gap-2">
+                <div>
+                    <p className="font-semibold text-gray-900">{order.number}</p>
+                    <p className="text-xs text-gray-500">Passée le {order.created_at}</p>
+                </div>
+                <p className="text-lg font-bold text-gray-900">
+                    {formatPrice(order.total_price)}
+                </p>
+            </div>
+
+            {order.status !== 'en_attente' && (
+                <span
+                    className={`mt-2 self-start rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[order.status] ?? 'bg-gray-100 text-gray-700'}`}
+                >
+                    {order.status_label}
+                </span>
+            )}
+
+            <dl className="mt-3 space-y-2 text-sm">
+                <div>
+                    <dt className="text-gray-500">Récupérer chez</dt>
+                    <dd className="font-medium text-gray-900">{order.store ?? '—'}</dd>
+                </div>
+                <div>
+                    <dt className="text-gray-500">Livrer à</dt>
+                    <dd className="font-medium text-gray-900">{order.neighborhood}</dd>
+                    <dd className="whitespace-pre-line text-gray-700">
+                        {order.address_landmarks}
+                    </dd>
+                </div>
+                <div className="flex flex-wrap gap-x-6 gap-y-2">
+                    <div>
+                        <dt className="text-gray-500">Paiement</dt>
+                        <dd className="font-medium text-gray-900">
+                            {order.payment_method_label}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt className="text-gray-500">Articles</dt>
+                        <dd className="font-medium text-gray-900">{itemCount}</dd>
+                    </div>
+                </div>
+                {order.client && (
+                    <div>
+                        <dt className="text-gray-500">Client</dt>
+                        <dd className="font-medium text-gray-900">
+                            {order.client.name}
+                            {order.client.phone && (
+                                <>
+                                    {' · '}
+                                    <a
+                                        href={`tel:${order.client.phone.replace(/\s/g, '')}`}
+                                        className="text-emerald-700 underline"
+                                    >
+                                        {order.client.phone}
+                                    </a>
+                                </>
+                            )}
+                        </dd>
+                    </div>
+                )}
+            </dl>
+
+            <details className="mt-3 text-sm">
+                <summary className="cursor-pointer text-gray-600 hover:text-gray-900">
+                    Détail des articles
+                </summary>
+                <ul className="mt-2 space-y-1 text-gray-700">
+                    {order.items.map((item) => (
+                        <li key={item.id}>
+                            {item.quantity} × {item.name}
+                        </li>
+                    ))}
+                </ul>
+            </details>
+
+            <div className="mt-4 pt-1 sm:mt-auto">{children}</div>
+        </article>
+    );
+}
+
+function ActionButton({ onClick, busy, variant = 'primary', children }) {
+    const styles = {
+        primary: 'bg-emerald-600 hover:bg-emerald-700 text-white',
+        dark: 'bg-gray-900 hover:bg-gray-800 text-white',
+    };
+
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            disabled={busy}
+            className={`w-full rounded-full py-2.5 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-50 ${styles[variant]}`}
+        >
+            {busy ? 'Envoi…' : children}
+        </button>
+    );
+}
+
+function EmptyState({ children }) {
+    return (
+        <p className="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-center text-sm text-gray-500">
+            {children}
+        </p>
+    );
+}
+
+export default function Dashboard({ available, mine, deliveredToday }) {
+    // Identifiant de la commande en cours d'envoi (bloque les doubles clics).
+    const [busyId, setBusyId] = useState(null);
+
+    usePoll(REFRESH_INTERVAL, { only: ['available', 'mine', 'deliveredToday'] });
+
+    const options = {
+        preserveScroll: true,
+        onFinish: () => setBusyId(null),
+    };
+
+    const accept = (order) => {
+        setBusyId(order.id);
+        router.post(route('delivery.orders.accept', order.id), {}, options);
+    };
+
+    const advance = (order) => {
+        setBusyId(order.id);
+        router.put(
+            route('orders.status.update', order.id),
+            { status: order.next_status },
+            options,
+        );
+    };
 
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Mes livraisons
-                </h2>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h2 className="text-xl font-semibold leading-tight text-gray-800">
+                        Mes livraisons
+                    </h2>
+                    <p className="text-sm text-gray-600">
+                        Livrées aujourd'hui :{' '}
+                        <span className="font-semibold text-gray-900">{deliveredToday}</span>
+                    </p>
+                </div>
             }
         >
             <Head title="Espace livreur" />
 
-            <div className="py-12">
-                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
-                        <div className="p-6 text-gray-900">
-                            Bienvenue {user.name}. Les commandes à livrer
-                            s'afficheront ici dans les prochaines étapes.
+            <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 lg:px-8">
+                <section>
+                    <h3 className="mb-3 text-lg font-semibold text-gray-900">
+                        Mes livraisons en cours ({mine.length})
+                    </h3>
+                    {mine.length === 0 ? (
+                        <EmptyState>
+                            Aucune livraison en cours. Acceptez une commande
+                            ci-dessous pour commencer.
+                        </EmptyState>
+                    ) : (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {mine.map((order) => (
+                                <OrderCard key={order.id} order={order}>
+                                    <ActionButton
+                                        variant="dark"
+                                        busy={busyId === order.id}
+                                        onClick={() => advance(order)}
+                                    >
+                                        {nextStepLabels[order.next_status]}
+                                    </ActionButton>
+                                </OrderCard>
+                            ))}
                         </div>
+                    )}
+                </section>
+
+                <section>
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                            Commandes disponibles ({available.length})
+                        </h3>
+                        <button
+                            type="button"
+                            onClick={() =>
+                                router.reload({
+                                    only: ['available', 'mine', 'deliveredToday'],
+                                })
+                            }
+                            className="text-sm font-medium text-emerald-700 hover:underline"
+                        >
+                            Actualiser
+                        </button>
                     </div>
-                </div>
+                    {available.length === 0 ? (
+                        <EmptyState>
+                            Aucune commande en attente pour le moment. La liste
+                            se met à jour automatiquement.
+                        </EmptyState>
+                    ) : (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {available.map((order) => (
+                                <OrderCard key={order.id} order={order}>
+                                    <ActionButton
+                                        busy={busyId === order.id}
+                                        onClick={() => accept(order)}
+                                    >
+                                        Accepter
+                                    </ActionButton>
+                                </OrderCard>
+                            ))}
+                        </div>
+                    )}
+                </section>
             </div>
         </AuthenticatedLayout>
     );
