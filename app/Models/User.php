@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -20,6 +21,8 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'phone',
+        'role',
         'password',
     ];
 
@@ -44,5 +47,21 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Commandes passées par l'utilisateur (rôle client).
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'client_id');
+    }
+
+    /**
+     * Commandes assignées à l'utilisateur (rôle livreur).
+     */
+    public function deliveries(): HasMany
+    {
+        return $this->hasMany(Order::class, 'delivery_id');
     }
 }
