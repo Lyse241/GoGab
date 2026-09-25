@@ -7,16 +7,26 @@ import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
-// Lien principal de la barre de navigation selon le rôle connecté.
-const homeLinks = {
-    admin: { route: 'admin.dashboard', label: 'Administration' },
-    delivery: { route: 'delivery.dashboard', label: 'Mes livraisons' },
-    client: { route: 'home', label: 'Accueil' },
+// Liens de la barre de navigation selon le rôle connecté.
+// `active` : motifs de routes pour lesquels le lien est surligné.
+const navLinks = {
+    admin: [
+        { route: 'admin.dashboard', label: 'Tableau de bord' },
+        {
+            route: 'admin.stores.index',
+            label: 'Boutiques',
+            active: ['admin.stores.*', 'admin.products.*'],
+        },
+    ],
+    delivery: [{ route: 'delivery.dashboard', label: 'Mes livraisons' }],
+    client: [{ route: 'home', label: 'Accueil' }],
 };
 
 export default function AuthenticatedLayout({ header, children }) {
     const { user, role } = usePage().props.auth;
-    const homeLink = homeLinks[role] ?? homeLinks.client;
+    const links = navLinks[role] ?? navLinks.client;
+    const isActive = (link) =>
+        (link.active ?? [link.route]).some((pattern) => route().current(pattern));
 
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
         useState(false);
@@ -34,12 +44,15 @@ export default function AuthenticatedLayout({ header, children }) {
                             </div>
 
                             <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                <NavLink
-                                    href={route(homeLink.route)}
-                                    active={route().current(homeLink.route)}
-                                >
-                                    {homeLink.label}
-                                </NavLink>
+                                {links.map((link) => (
+                                    <NavLink
+                                        key={link.route}
+                                        href={route(link.route)}
+                                        active={isActive(link)}
+                                    >
+                                        {link.label}
+                                    </NavLink>
+                                ))}
                             </div>
                         </div>
 
@@ -140,12 +153,15 @@ export default function AuthenticatedLayout({ header, children }) {
                     }
                 >
                     <div className="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink
-                            href={route(homeLink.route)}
-                            active={route().current(homeLink.route)}
-                        >
-                            {homeLink.label}
-                        </ResponsiveNavLink>
+                        {links.map((link) => (
+                            <ResponsiveNavLink
+                                key={link.route}
+                                href={route(link.route)}
+                                active={isActive(link)}
+                            >
+                                {link.label}
+                            </ResponsiveNavLink>
+                        ))}
                     </div>
 
                     <div className="border-t border-gray-200 pb-1 pt-4">

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\OrderController;
@@ -35,7 +36,12 @@ Route::middleware(['auth', 'role:delivery'])->group(function () {
 });
 
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', fn () => Inertia::render('Admin/Dashboard'))->name('dashboard');
+    Route::get('/dashboard', Admin\DashboardController::class)->name('dashboard');
+    Route::resource('stores', Admin\StoreController::class)->except('show');
+    // Produits rattachés à une boutique : /admin/stores/{store}/products/create, /admin/products/{product}/edit…
+    Route::resource('stores.products', Admin\ProductController::class)
+        ->shallow()
+        ->only(['create', 'store', 'edit', 'update', 'destroy']);
 });
 
 Route::middleware('auth')->group(function () {
