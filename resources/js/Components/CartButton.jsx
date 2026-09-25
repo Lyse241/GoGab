@@ -17,7 +17,7 @@ export default function CartButton({ className = '' }) {
         <Link
             href={route('cart')}
             aria-label={`Panier, ${itemCount} article${itemCount > 1 ? 's' : ''}`}
-            className={`relative inline-flex h-10 w-10 items-center justify-center rounded-full text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${className}`}
+            className={`relative inline-flex h-10 w-10 items-center justify-center rounded-full text-white hover:bg-secondary-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${className}`}
         >
             <svg
                 className="h-6 w-6"
@@ -34,7 +34,7 @@ export default function CartButton({ className = '' }) {
                 />
             </svg>
             {itemCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1 text-[11px] font-bold leading-none text-white">
+                <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-bold leading-none text-secondary-900">
                     {itemCount > 99 ? '99+' : itemCount}
                 </span>
             )}

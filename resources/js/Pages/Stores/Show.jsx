@@ -26,8 +26,8 @@ function ProductCard({ product, quantity, onAdd, onQuantityChange }) {
                         {product.description}
                     </p>
                 )}
-                <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-                    <p className="font-bold text-emerald-700">
+                <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-2">
+                    <p className="whitespace-nowrap font-bold text-primary-700">
                         {formatPrice(product.price)}
                     </p>
                     {quantity > 0 ? (
@@ -40,7 +40,7 @@ function ProductCard({ product, quantity, onAdd, onQuantityChange }) {
                         <button
                             type="button"
                             onClick={onAdd}
-                            className="rounded-full bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                            className="whitespace-nowrap rounded-full bg-primary-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                         >
                             Ajouter au panier
                         </button>
@@ -78,12 +78,12 @@ export default function Show({ store, products }) {
 
             <Link
                 href={route('home')}
-                className="mt-4 inline-block text-sm font-medium text-emerald-700 hover:underline"
+                className="mt-4 inline-block text-sm font-medium text-secondary hover:underline"
             >
                 ← Toutes les boutiques
             </Link>
 
-            <section className="relative mt-3 overflow-hidden rounded-xl bg-gray-800">
+            <section className="relative mt-3 overflow-hidden rounded-xl bg-secondary">
                 {store.image && (
                     <img
                         src={imageUrl(store.image)}
@@ -91,8 +91,8 @@ export default function Show({ store, products }) {
                         className="h-40 w-full object-cover opacity-60 sm:h-56"
                     />
                 )}
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4 sm:p-6">
-                    <span className="rounded bg-emerald-600 px-2 py-0.5 text-xs font-medium text-white">
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-secondary-900/80 to-transparent p-4 sm:p-6">
+                    <span className="rounded-full bg-accent px-2.5 py-0.5 text-xs font-semibold text-secondary-900">
                         {store.category}
                     </span>
                     <h1 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
@@ -101,7 +101,7 @@ export default function Show({ store, products }) {
                 </div>
             </section>
 
-            <h2 className="mb-3 mt-6 text-lg font-semibold text-gray-800">
+            <h2 className="mb-3 mt-6 text-lg font-semibold text-secondary">
                 Menu ({products.length})
             </h2>
 
@@ -146,7 +146,7 @@ export default function Show({ store, products }) {
                             </div>
                             <Link
                                 href={route('cart')}
-                                className="rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                                className="rounded-full bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                             >
                                 Voir le panier
                             </Link>
@@ -161,7 +161,7 @@ export default function Show({ store, products }) {
                 onClose={() => setPendingProduct(null)}
             >
                 <div className="p-6">
-                    <h2 className="text-lg font-semibold text-gray-900">
+                    <h2 className="text-lg font-semibold text-secondary">
                         Commencer un nouveau panier ?
                     </h2>
                     <p className="mt-2 text-sm text-gray-600">
@@ -174,14 +174,14 @@ export default function Show({ store, products }) {
                         <button
                             type="button"
                             onClick={() => setPendingProduct(null)}
-                            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            className="rounded-full border border-secondary-200 px-5 py-2 text-sm font-semibold text-secondary hover:bg-secondary-50"
                         >
                             Garder mon panier
                         </button>
                         <button
                             type="button"
                             onClick={confirmReplace}
-                            className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                            className="rounded-full bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700"
                         >
                             Vider et ajouter
                         </button>

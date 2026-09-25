@@ -33,7 +33,7 @@ export default function Form({ store, product }) {
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
+                <h2 className="text-xl font-semibold leading-tight text-secondary">
                     {title}
                     <span className="block text-sm font-normal text-gray-500">{store.name}</span>
                 </h2>
@@ -44,7 +44,7 @@ export default function Form({ store, product }) {
             <div className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
                 <Link
                     href={route('admin.stores.edit', store.id)}
-                    className="text-sm font-medium text-emerald-700 hover:underline"
+                    className="text-sm font-medium text-secondary hover:underline"
                 >
                     ← Retour à {store.name}
                 </Link>
@@ -74,7 +74,7 @@ export default function Form({ store, product }) {
                             maxLength={1000}
                             value={data.description}
                             onChange={(e) => setData('description', e.target.value)}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
                         />
                         <InputError message={errors.description} className="mt-1" />
                     </div>

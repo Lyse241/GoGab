@@ -11,8 +11,8 @@ function CategoryChip({ active, onClick, children }) {
             aria-pressed={active}
             className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition ${
                 active
-                    ? 'border-emerald-600 bg-emerald-600 text-white'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-emerald-600 hover:text-emerald-700'
+                    ? 'border-primary-600 bg-primary-600 text-white'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary-700'
             }`}
         >
             {children}
@@ -24,7 +24,7 @@ function StoreCard({ store }) {
     return (
         <Link
             href={route('stores.show', store.id)}
-            className="group block overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200 transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            className="group block overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200 transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
             <div className="aspect-[3/2] bg-gray-200">
                 {store.image && (
@@ -39,7 +39,7 @@ function StoreCard({ store }) {
             <div className="p-4">
                 <h3 className="font-semibold text-gray-900">{store.name}</h3>
                 <p className="mt-1 flex items-center justify-between text-sm text-gray-500">
-                    <span className="rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                    <span className="rounded-full bg-accent-100 px-2 py-0.5 text-xs font-semibold text-accent-900">
                         {store.category}
                     </span>
                     <span>
@@ -62,7 +62,7 @@ export default function Index({ stores, categories }) {
             <Head title="Boutiques" />
 
             <section className="pt-6">
-                <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+                <h1 className="text-2xl font-bold text-secondary sm:text-3xl">
                     Faites-vous livrer à Libreville
                 </h1>
                 <p className="mt-1 text-gray-600">
@@ -94,7 +94,7 @@ export default function Index({ stores, categories }) {
 
             {visibleCategories.map((category) => (
                 <section key={category} className="mt-6">
-                    <h2 className="mb-3 text-lg font-semibold text-gray-800">
+                    <h2 className="mb-3 text-lg font-semibold text-secondary">
                         {category}
                     </h2>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

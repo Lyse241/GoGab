@@ -8,12 +8,12 @@ export default function Index({ stores }) {
         <AuthenticatedLayout
             header={
                 <div className="flex items-center justify-between gap-2">
-                    <h2 className="text-xl font-semibold leading-tight text-gray-800">
+                    <h2 className="text-xl font-semibold leading-tight text-secondary">
                         Boutiques
                     </h2>
                     <Link
                         href={route('admin.stores.create')}
-                        className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                        className="rounded-full bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
                     >
                         + Nouvelle boutique
                     </Link>
@@ -51,7 +51,7 @@ export default function Index({ stores }) {
                                 <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-4">
                                     <Link
                                         href={route('admin.stores.edit', store.id)}
-                                        className="text-sm font-medium text-emerald-700 hover:underline"
+                                        className="text-sm font-medium text-secondary hover:underline"
                                     >
                                         Modifier
                                     </Link>

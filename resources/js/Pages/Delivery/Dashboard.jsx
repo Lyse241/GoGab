@@ -1,14 +1,10 @@
+import StatusBadge from '@/Components/StatusBadge';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatPrice } from '@/utils/format';
 import { Head, router, usePoll } from '@inertiajs/react';
 import { useState } from 'react';
 
 const REFRESH_INTERVAL = 30000; // 30 s : nouvelles commandes sans recharger la page
-
-const statusStyles = {
-    acceptee: 'bg-blue-100 text-blue-800',
-    en_livraison: 'bg-amber-100 text-amber-800',
-};
 
 // Libellé du bouton selon l'étape suivante.
 const nextStepLabels = {
@@ -32,11 +28,11 @@ function OrderCard({ order, children }) {
             </div>
 
             {order.status !== 'en_attente' && (
-                <span
-                    className={`mt-2 self-start rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[order.status] ?? 'bg-gray-100 text-gray-700'}`}
-                >
-                    {order.status_label}
-                </span>
+                <StatusBadge
+                    status={order.status}
+                    label={order.status_label}
+                    className="mt-2 self-start"
+                />
             )}
 
             <dl className="mt-3 space-y-2 text-sm">
@@ -73,7 +69,7 @@ function OrderCard({ order, children }) {
                                     {' · '}
                                     <a
                                         href={`tel:${order.client.phone.replace(/\s/g, '')}`}
-                                        className="text-emerald-700 underline"
+                                        className="text-secondary underline"
                                     >
                                         {order.client.phone}
                                     </a>
@@ -104,8 +100,8 @@ function OrderCard({ order, children }) {
 
 function ActionButton({ onClick, busy, variant = 'primary', children }) {
     const styles = {
-        primary: 'bg-emerald-600 hover:bg-emerald-700 text-white',
-        dark: 'bg-gray-900 hover:bg-gray-800 text-white',
+        primary: 'bg-primary-600 hover:bg-primary-700 text-white',
+        dark: 'bg-secondary hover:bg-secondary-800 text-white',
     };
 
     return (
@@ -113,7 +109,7 @@ function ActionButton({ onClick, busy, variant = 'primary', children }) {
             type="button"
             onClick={onClick}
             disabled={busy}
-            className={`w-full rounded-full py-2.5 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-50 ${styles[variant]}`}
+            className={`w-full rounded-full py-2.5 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 ${styles[variant]}`}
         >
             {busy ? 'Envoi…' : children}
         </button>
@@ -157,7 +153,7 @@ export default function Dashboard({ available, mine, deliveredToday }) {
         <AuthenticatedLayout
             header={
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h2 className="text-xl font-semibold leading-tight text-gray-800">
+                    <h2 className="text-xl font-semibold leading-tight text-secondary">
                         Mes livraisons
                     </h2>
                     <p className="text-sm text-gray-600">
@@ -171,7 +167,7 @@ export default function Dashboard({ available, mine, deliveredToday }) {
 
             <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 lg:px-8">
                 <section>
-                    <h3 className="mb-3 text-lg font-semibold text-gray-900">
+                    <h3 className="mb-3 text-lg font-semibold text-secondary">
                         Mes livraisons en cours ({mine.length})
                     </h3>
                     {mine.length === 0 ? (
@@ -198,7 +194,7 @@ export default function Dashboard({ available, mine, deliveredToday }) {
 
                 <section>
                     <div className="mb-3 flex items-center justify-between gap-2">
-                        <h3 className="text-lg font-semibold text-gray-900">
+                        <h3 className="text-lg font-semibold text-secondary">
                             Commandes disponibles ({available.length})
                         </h3>
                         <button
@@ -208,7 +204,7 @@ export default function Dashboard({ available, mine, deliveredToday }) {
                                     only: ['available', 'mine', 'deliveredToday'],
                                 })
                             }
-                            className="text-sm font-medium text-emerald-700 hover:underline"
+                            className="text-sm font-medium text-secondary hover:underline"
                         >
                             Actualiser
                         </button>

@@ -1,32 +1,16 @@
 import Pagination from '@/Components/Pagination';
+import StatusBadge from '@/Components/StatusBadge';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatPrice } from '@/utils/format';
 import { Head, Link } from '@inertiajs/react';
-
-const statusStyles = {
-    en_attente: 'bg-gray-100 text-gray-800',
-    acceptee: 'bg-blue-100 text-blue-800',
-    en_livraison: 'bg-amber-100 text-amber-800',
-    livree: 'bg-emerald-100 text-emerald-800',
-};
 
 function StatCard({ label, value, hint }) {
     return (
         <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
             <p className="text-sm text-gray-500">{label}</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
+            <p className="mt-1 text-2xl font-bold text-secondary">{value}</p>
             {hint && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
         </div>
-    );
-}
-
-function StatusBadge({ status, label }) {
-    return (
-        <span
-            className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[status]}`}
-        >
-            {label}
-        </span>
     );
 }
 
@@ -38,8 +22,8 @@ function FilterLink({ status, active, children }) {
             preserveState
             className={`shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                 active
-                    ? 'border-gray-900 bg-gray-900 text-white'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-900'
+                    ? 'border-secondary bg-secondary text-white'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-secondary'
             }`}
         >
             {children}
@@ -51,7 +35,7 @@ export default function Dashboard({ stats, orders, filters }) {
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
+                <h2 className="text-xl font-semibold leading-tight text-secondary">
                     Tableau de bord
                 </h2>
             }
@@ -85,7 +69,7 @@ export default function Dashboard({ stats, orders, filters }) {
                                         </div>
                                         <div className="mt-1 h-1.5 rounded-full bg-gray-100">
                                             <div
-                                                className="h-1.5 rounded-full bg-emerald-500"
+                                                className="h-1.5 rounded-full bg-primary-500"
                                                 style={{ width: `${percent}%` }}
                                             />
                                         </div>
@@ -98,7 +82,7 @@ export default function Dashboard({ stats, orders, filters }) {
 
                 {/* 2. Toutes les commandes */}
                 <section>
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-secondary">
                         Commandes ({orders.total})
                     </h3>
 

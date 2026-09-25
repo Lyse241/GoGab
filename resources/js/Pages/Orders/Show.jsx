@@ -1,3 +1,4 @@
+import StatusBadge from '@/Components/StatusBadge';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { formatPrice, imageUrl } from '@/utils/format';
 import { Head, Link } from '@inertiajs/react';
@@ -20,9 +21,9 @@ export default function Show({ order }) {
 
             <div className="mx-auto max-w-2xl">
                 <div className="mt-6 text-center">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary-100">
                         <svg
-                            className="h-8 w-8 text-emerald-600"
+                            className="h-8 w-8 text-primary-600"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -32,7 +33,7 @@ export default function Show({ order }) {
                             <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                         </svg>
                     </div>
-                    <h1 className="mt-3 text-2xl font-bold text-gray-900">
+                    <h1 className="mt-3 text-2xl font-bold text-secondary">
                         Merci pour votre commande !
                     </h1>
                     <p className="mt-1 text-gray-600">
@@ -40,9 +41,11 @@ export default function Show({ order }) {
                         <span className="font-semibold text-gray-900">{order.number}</span>{' '}
                         · passée le {order.created_at}
                     </p>
-                    <span className="mt-3 inline-block rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
-                        {order.status_label}
-                    </span>
+                    <StatusBadge
+                        status={order.status}
+                        label={order.status_label}
+                        className="mt-3 px-3 py-1 text-sm"
+                    />
                 </div>
 
                 <section className="mt-6 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
@@ -95,7 +98,7 @@ export default function Show({ order }) {
 
                 <Link
                     href={route('home')}
-                    className="mt-6 block w-full rounded-full bg-emerald-600 py-3 text-center font-semibold text-white hover:bg-emerald-700"
+                    className="mt-6 block w-full rounded-full bg-primary-600 py-3 text-center font-semibold text-white hover:bg-primary-700"
                 >
                     Retour aux boutiques
                 </Link>

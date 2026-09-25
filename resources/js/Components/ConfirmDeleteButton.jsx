@@ -32,13 +32,13 @@ export default function ConfirmDeleteButton({ url, title, message, className = '
 
             <Modal show={open} maxWidth="md" onClose={() => setOpen(false)}>
                 <div className="p-6">
-                    <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+                    <h2 className="text-lg font-semibold text-secondary">{title}</h2>
                     <p className="mt-2 text-sm text-gray-600">{message}</p>
                     <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                         <button
                             type="button"
                             onClick={() => setOpen(false)}
-                            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            className="rounded-full border border-secondary-200 px-5 py-2 text-sm font-semibold text-secondary hover:bg-secondary-50"
                         >
                             Annuler
                         </button>
@@ -46,7 +46,7 @@ export default function ConfirmDeleteButton({ url, title, message, className = '
                             type="button"
                             onClick={confirm}
                             disabled={processing}
-                            className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                            className="rounded-full bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
                         >
                             Supprimer définitivement
                         </button>

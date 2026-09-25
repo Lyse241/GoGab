@@ -10,7 +10,7 @@ export default function FlashMessage({ className = '' }) {
     return (
         <div className={`space-y-2 ${className}`}>
             {flash.success && (
-                <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                <div className="rounded-md border border-primary-200 bg-primary-50 px-4 py-3 text-sm text-primary-800">
                     {flash.success}
                 </div>
             )}

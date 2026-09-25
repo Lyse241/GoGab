@@ -42,7 +42,7 @@ export default function ImageField({ id = 'image', current, file, onChange, erro
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
                     onChange={(e) => onChange(e.target.files[0] ?? null)}
-                    className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-emerald-700 hover:file:bg-emerald-100"
+                    className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-700 hover:file:bg-primary-100"
                 />
             </div>
             <InputError message={error} className="mt-1" />

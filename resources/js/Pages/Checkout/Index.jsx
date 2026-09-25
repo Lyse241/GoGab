@@ -74,7 +74,7 @@ function OrderSummary({ cart }) {
             </div>
             <Link
                 href={route('cart')}
-                className="mt-3 inline-block text-sm font-medium text-emerald-700 hover:underline"
+                className="mt-3 inline-block text-sm font-medium text-secondary hover:underline"
             >
                 Modifier le panier
             </Link>
@@ -142,7 +142,7 @@ export default function Index({ neighborhoods, paymentMethods }) {
                     </p>
                     <Link
                         href={route('home')}
-                        className="mt-6 inline-block rounded-full bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
+                        className="mt-6 inline-block rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
                     >
                         Voir les boutiques
                     </Link>
@@ -155,7 +155,7 @@ export default function Index({ neighborhoods, paymentMethods }) {
         <PublicLayout>
             <Head title="Commande" />
 
-            <h1 className="mt-6 text-2xl font-bold text-gray-900">
+            <h1 className="mt-6 text-2xl font-bold text-secondary">
                 Finaliser la commande
             </h1>
 
@@ -182,7 +182,7 @@ export default function Index({ neighborhoods, paymentMethods }) {
                             value={data.neighborhood_id}
                             onChange={(e) => update('neighborhood_id', e.target.value)}
                             aria-invalid={!!errors.neighborhood_id}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
                         >
                             <option value="">Sélectionnez votre quartier</option>
                             {neighborhoods.map((neighborhood) => (
@@ -208,7 +208,7 @@ export default function Index({ neighborhoods, paymentMethods }) {
                             onChange={(e) => update('address_landmarks', e.target.value)}
                             placeholder="Ex : près de la pharmacie Awendjé, portail bleu"
                             aria-invalid={!!errors.address_landmarks}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
                         />
                         <div className="mt-1 flex justify-between gap-2">
                             <InputError message={errors.address_landmarks} />
@@ -237,7 +237,7 @@ export default function Index({ neighborhoods, paymentMethods }) {
                                         key={method.value}
                                         className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition ${
                                             data.payment_method === method.value
-                                                ? 'border-emerald-600 bg-emerald-50'
+                                                ? 'border-primary-600 bg-primary-50'
                                                 : 'border-gray-200 hover:border-gray-300'
                                         }`}
                                     >
@@ -247,7 +247,7 @@ export default function Index({ neighborhoods, paymentMethods }) {
                                             value={method.value}
                                             checked={data.payment_method === method.value}
                                             onChange={(e) => update('payment_method', e.target.value)}
-                                            className="text-emerald-600 focus:ring-emerald-500"
+                                            className="text-primary-600 focus:ring-primary"
                                         />
                                         <span className="font-medium text-gray-800">
                                             {method.label}
@@ -278,7 +278,7 @@ export default function Index({ neighborhoods, paymentMethods }) {
                     <button
                         type="submit"
                         disabled={processing}
-                        className="w-full rounded-full bg-emerald-600 py-3 font-semibold text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-50"
+                        className="w-full rounded-full bg-primary-600 py-3 font-semibold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50"
                     >
                         {processing
                             ? 'Envoi en cours…'

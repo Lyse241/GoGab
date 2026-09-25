@@ -85,7 +85,7 @@ export default function Index() {
                     </p>
                     <Link
                         href={route('home')}
-                        className="mt-6 inline-block rounded-full bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
+                        className="mt-6 inline-block rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
                     >
                         Voir les boutiques
                     </Link>
@@ -100,7 +100,7 @@ export default function Index() {
 
             <div className="mx-auto max-w-2xl">
                 <div className="mt-6 flex items-baseline justify-between gap-2">
-                    <h1 className="text-2xl font-bold text-gray-900">Mon panier</h1>
+                    <h1 className="text-2xl font-bold text-secondary">Mon panier</h1>
                     <button
                         type="button"
                         onClick={cart.clearCart}
@@ -113,7 +113,7 @@ export default function Index() {
                     Boutique :{' '}
                     <Link
                         href={route('stores.show', cart.store.id)}
-                        className="font-medium text-emerald-700 hover:underline"
+                        className="font-medium text-secondary hover:underline"
                     >
                         {cart.store.name}
                     </Link>
@@ -145,13 +145,13 @@ export default function Index() {
 
                     <Link
                         href={route('checkout')}
-                        className="mt-4 block w-full rounded-full bg-emerald-600 py-3 text-center font-semibold text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                        className="mt-4 block w-full rounded-full bg-primary-600 py-3 text-center font-semibold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                     >
                         Passer commande
                     </Link>
                     <Link
                         href={route('stores.show', cart.store.id)}
-                        className="mt-2 block text-center text-sm font-medium text-emerald-700 hover:underline"
+                        className="mt-2 block text-center text-sm font-medium text-secondary hover:underline"
                     >
                         Continuer mes achats
                     </Link>

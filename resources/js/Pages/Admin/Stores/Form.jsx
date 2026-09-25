@@ -12,12 +12,12 @@ function ProductsSection({ store, products }) {
     return (
         <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200 sm:p-6">
             <div className="flex items-center justify-between gap-2">
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-secondary">
                     Produits ({products.length})
                 </h3>
                 <Link
                     href={route('admin.stores.products.create', store.id)}
-                    className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                    className="rounded-full bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
                 >
                     + Ajouter un produit
                 </Link>
@@ -46,7 +46,7 @@ function ProductsSection({ store, products }) {
                             <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-4">
                                 <Link
                                     href={route('admin.products.edit', product.id)}
-                                    className="text-sm font-medium text-emerald-700 hover:underline"
+                                    className="text-sm font-medium text-secondary hover:underline"
                                 >
                                     Modifier
                                 </Link>
@@ -89,7 +89,7 @@ export default function Form({ store, products, categories }) {
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">{title}</h2>
+                <h2 className="text-xl font-semibold leading-tight text-secondary">{title}</h2>
             }
         >
             <Head title={title} />
@@ -97,7 +97,7 @@ export default function Form({ store, products, categories }) {
             <div className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
                 <Link
                     href={route('admin.stores.index')}
-                    className="text-sm font-medium text-emerald-700 hover:underline"
+                    className="text-sm font-medium text-secondary hover:underline"
                 >
                     ← Toutes les boutiques
                 </Link>
