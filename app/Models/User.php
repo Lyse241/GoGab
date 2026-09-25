@@ -13,6 +13,12 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
+    public const ROLE_ADMIN = 'admin';
+
+    public const ROLE_DELIVERY = 'delivery';
+
+    public const ROLE_CLIENT = 'client';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -47,6 +53,23 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function hasRole(string ...$roles): bool
+    {
+        return in_array($this->role, $roles, true);
+    }
+
+    /**
+     * Nom de la route de l'espace propre au rôle de l'utilisateur.
+     */
+    public function homeRoute(): string
+    {
+        return match ($this->role) {
+            self::ROLE_ADMIN => 'admin.dashboard',
+            self::ROLE_DELIVERY => 'delivery.dashboard',
+            default => 'home',
+        };
     }
 
     /**

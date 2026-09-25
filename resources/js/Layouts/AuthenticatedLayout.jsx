@@ -1,12 +1,21 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
+import FlashMessage from '@/Components/FlashMessage';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
+// Lien principal de la barre de navigation selon le rôle connecté.
+const homeLinks = {
+    admin: { route: 'admin.dashboard', label: 'Administration' },
+    delivery: { route: 'delivery.dashboard', label: 'Mes livraisons' },
+    client: { route: 'home', label: 'Accueil' },
+};
+
 export default function AuthenticatedLayout({ header, children }) {
-    const user = usePage().props.auth.user;
+    const { user, role } = usePage().props.auth;
+    const homeLink = homeLinks[role] ?? homeLinks.client;
 
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
         useState(false);
@@ -25,10 +34,10 @@ export default function AuthenticatedLayout({ header, children }) {
 
                             <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                                 <NavLink
-                                    href={route('dashboard')}
-                                    active={route().current('dashboard')}
+                                    href={route(homeLink.route)}
+                                    active={route().current(homeLink.route)}
                                 >
-                                    Dashboard
+                                    {homeLink.label}
                                 </NavLink>
                             </div>
                         </div>
@@ -129,10 +138,10 @@ export default function AuthenticatedLayout({ header, children }) {
                 >
                     <div className="space-y-1 pb-3 pt-2">
                         <ResponsiveNavLink
-                            href={route('dashboard')}
-                            active={route().current('dashboard')}
+                            href={route(homeLink.route)}
+                            active={route().current(homeLink.route)}
                         >
-                            Dashboard
+                            {homeLink.label}
                         </ResponsiveNavLink>
                     </div>
 
@@ -170,7 +179,10 @@ export default function AuthenticatedLayout({ header, children }) {
                 </header>
             )}
 
-            <main>{children}</main>
+            <main>
+                <FlashMessage className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8" />
+                {children}
+            </main>
         </div>
     );
 }

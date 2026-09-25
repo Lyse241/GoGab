@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -12,11 +13,20 @@ Route::get('/', function () {
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
     ]);
+})->name('home');
+
+// Point d'entrée après connexion / inscription : renvoie chaque rôle vers son espace.
+Route::get('/dashboard', function (Request $request) {
+    return redirect()->route($request->user()->homeRoute());
+})->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::middleware(['auth', 'role:delivery'])->prefix('delivery')->name('delivery.')->group(function () {
+    Route::get('/dashboard', fn () => Inertia::render('Delivery/Dashboard'))->name('dashboard');
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', fn () => Inertia::render('Admin/Dashboard'))->name('dashboard');
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

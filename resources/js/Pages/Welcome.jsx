@@ -1,3 +1,4 @@
+import FlashMessage from '@/Components/FlashMessage';
 import { Head, Link } from '@inertiajs/react';
 
 export default function Welcome({ auth, laravelVersion, phpVersion }) {
@@ -40,10 +41,16 @@ export default function Welcome({ auth, laravelVersion, phpVersion }) {
                             <nav className="-mx-3 flex flex-1 justify-end">
                                 {auth.user ? (
                                     <Link
-                                        href={route('dashboard')}
+                                        href={route(
+                                            auth.role === 'client'
+                                                ? 'profile.edit'
+                                                : 'dashboard',
+                                        )}
                                         className="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
                                     >
-                                        Dashboard
+                                        {auth.role === 'client'
+                                            ? 'Mon compte'
+                                            : 'Mon espace'}
                                     </Link>
                                 ) : (
                                     <>
@@ -63,6 +70,8 @@ export default function Welcome({ auth, laravelVersion, phpVersion }) {
                                 )}
                             </nav>
                         </header>
+
+                        <FlashMessage className="mt-6" />
 
                         <main className="mt-6">
                             <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
