@@ -1,3 +1,4 @@
+import CartButton from '@/Components/CartButton';
 import FlashMessage from '@/Components/FlashMessage';
 import { Link, usePage } from '@inertiajs/react';
 
@@ -54,6 +55,7 @@ export default function PublicLayout({ children }) {
                                 </Link>
                             </>
                         )}
+                        <CartButton />
                     </nav>
                 </div>
             </header>

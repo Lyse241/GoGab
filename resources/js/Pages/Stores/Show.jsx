@@ -1,39 +1,10 @@
 import Modal from '@/Components/Modal';
-import { MAX_QUANTITY, useCart } from '@/Contexts/CartContext';
+import QuantityStepper from '@/Components/QuantityStepper';
+import { useCart } from '@/Contexts/CartContext';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { formatPrice, imageUrl } from '@/utils/format';
 import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
-
-function QuantityStepper({ quantity, onChange, label }) {
-    const buttonClass =
-        'flex h-8 w-8 items-center justify-center rounded-full text-lg font-bold text-emerald-700 hover:bg-emerald-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-40';
-
-    return (
-        <div className="flex items-center gap-1 rounded-full bg-emerald-50 p-0.5">
-            <button
-                type="button"
-                className={buttonClass}
-                onClick={() => onChange(quantity - 1)}
-                aria-label={`Retirer un ${label}`}
-            >
-                −
-            </button>
-            <span className="w-6 text-center text-sm font-semibold" aria-live="polite">
-                {quantity}
-            </span>
-            <button
-                type="button"
-                className={buttonClass}
-                onClick={() => onChange(quantity + 1)}
-                disabled={quantity >= MAX_QUANTITY}
-                aria-label={`Ajouter un ${label}`}
-            >
-                +
-            </button>
-        </div>
-    );
-}
 
 function ProductCard({ product, quantity, onAdd, onQuantityChange }) {
     return (
@@ -173,13 +144,12 @@ export default function Show({ store, products }) {
                                     {formatPrice(cart.total)}
                                 </p>
                             </div>
-                            <button
-                                type="button"
-                                onClick={cart.clearCart}
-                                className="rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                            <Link
+                                href={route('cart')}
+                                className="rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
                             >
-                                Vider le panier
-                            </button>
+                                Voir le panier
+                            </Link>
                         </div>
                     </div>
                 </>

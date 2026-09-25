@@ -1,4 +1,5 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import CartButton from '@/Components/CartButton';
 import Dropdown from '@/Components/Dropdown';
 import FlashMessage from '@/Components/FlashMessage';
 import NavLink from '@/Components/NavLink';
@@ -43,6 +44,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         </div>
 
                         <div className="hidden sm:ms-6 sm:flex sm:items-center">
+                            <CartButton />
                             <div className="relative ms-3">
                                 <Dropdown>
                                     <Dropdown.Trigger>
@@ -87,7 +89,8 @@ export default function AuthenticatedLayout({ header, children }) {
                             </div>
                         </div>
 
-                        <div className="-me-2 flex items-center sm:hidden">
+                        <div className="-me-2 flex items-center gap-1 sm:hidden">
+                            <CartButton />
                             <button
                                 onClick={() =>
                                     setShowingNavigationDropdown(

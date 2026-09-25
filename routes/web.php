@@ -10,6 +10,14 @@ use Inertia\Inertia;
 Route::get('/', [StoreController::class, 'index'])->name('home');
 Route::get('/stores/{store}', [StoreController::class, 'show'])->name('stores.show');
 
+// Panier : contenu géré côté React (localStorage), la page n'a besoin d'aucune donnée serveur.
+Route::get('/cart', fn () => Inertia::render('Cart/Index'))->name('cart');
+
+// Commande réservée aux clients connectés (page provisoire jusqu'à l'étape 4).
+Route::get('/checkout', fn () => Inertia::render('Checkout/Index'))
+    ->middleware(['auth', 'role:client'])
+    ->name('checkout');
+
 // Point d'entrée après connexion / inscription : renvoie chaque rôle vers son espace.
 Route::get('/dashboard', function (Request $request) {
     return redirect()->route($request->user()->homeRoute());
