@@ -1,19 +1,14 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use Illuminate\Foundation\Application;
+use App\Http\Controllers\StoreController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
-})->name('home');
+// Catalogue public
+Route::get('/', [StoreController::class, 'index'])->name('home');
+Route::get('/stores/{store}', [StoreController::class, 'show'])->name('stores.show');
 
 // Point d'entrée après connexion / inscription : renvoie chaque rôle vers son espace.
 Route::get('/dashboard', function (Request $request) {
