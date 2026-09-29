@@ -30,13 +30,19 @@ Route::get('/design-system', function () {
     return Inertia::render('DesignSystem');
 })->name('design-system');
 
-// Panier : contenu géré côté React (localStorage), la page n'a besoin d'aucune donnée serveur.
-Route::get('/cart', fn () => Inertia::render('Cart/Index'))->name('cart');
+// Paniers : un par commerce, gérés côté React (localStorage). `?store=` ouvre celui d'un commerce.
+Route::get('/cart', fn (Request $request) => Inertia::render('Cart/Index', [
+    'openStore' => $request->integer('store') ?: null,
+]))->name('cart');
+// Visiteur qui veut commander : connexion puis retour sur ce panier.
+Route::get('/cart/{store}/login', [CheckoutController::class, 'login'])->middleware('guest')->name('cart.login');
 
 // Commande réservée aux clients dont le compte est validé
 // (un client en attente peut parcourir le catalogue, pas commander).
 Route::middleware(['auth', 'role:client', 'approved'])->group(function () {
-    Route::get('/checkout', [CheckoutController::class, 'create'])->name('checkout');
+    // Un checkout = le panier d'UN seul commerce.
+    Route::get('/checkout/{store}', [CheckoutController::class, 'create'])->name('checkout');
+    Route::get('/checkout', [CheckoutController::class, 'legacy']);
     Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 });

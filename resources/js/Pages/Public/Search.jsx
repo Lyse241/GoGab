@@ -5,7 +5,6 @@ import ProductCard from '@/Components/ProductCard';
 import Button from '@/Components/UI/Button';
 import EmptyState from '@/Components/UI/EmptyState';
 import { useCart } from '@/Contexts/CartContext';
-import useAddToCart from '@/Hooks/useAddToCart';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { cn } from '@/utils/cn';
 import { imageUrl } from '@/utils/format';
@@ -54,7 +53,6 @@ function StoreResult({ store }) {
  */
 export default function Search({ q, stores, productGroups, minLength }) {
     const cart = useCart();
-    const { add, dialog } = useAddToCart();
 
     const productCount = productGroups.reduce((sum, group) => sum + group.products.length, 0);
     const tooShort = q.length < minLength;
@@ -143,10 +141,10 @@ export default function Search({ q, stores, productGroups, minLength }) {
                                             key={product.id}
                                             product={product}
                                             canOrder={store.is_open_now}
-                                            quantity={cart.store?.id === store.id ? cart.quantityOf(product.id) : 0}
-                                            onAdd={() => add(product, store)}
-                                            onQuantityChange={(quantity) => cart.updateQuantity(product.id, quantity)}
-                                            onRemove={() => cart.removeItem(product.id)}
+                                            quantity={cart.quantityOf(store.id, product.id)}
+                                            onAdd={() => cart.addItem(product, store)}
+                                            onQuantityChange={(quantity) => cart.updateQuantity(store.id, product.id, quantity)}
+                                            onRemove={() => cart.removeItem(store.id, product.id)}
                                         />
                                     ))}
                                 </div>
@@ -155,8 +153,6 @@ export default function Search({ q, stores, productGroups, minLength }) {
                     </div>
                 </section>
             )}
-
-            {dialog}
         </PublicLayout>
     );
 }

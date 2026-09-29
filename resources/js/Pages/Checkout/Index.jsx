@@ -97,7 +97,7 @@ function OrderSummary({ cart, unavailableIds }) {
                 </span>
             </div>
             <Link
-                href={route('cart')}
+                href={route('cart', { store: cart.store.id })}
                 className="mt-3 inline-block text-sm font-medium text-secondary hover:underline"
             >
                 Modifier le panier
@@ -106,11 +106,13 @@ function OrderSummary({ cart, unavailableIds }) {
     );
 }
 
-export default function Index({ neighborhoods, paymentMethods }) {
-    const cart = useCart();
+export default function Index({ store, neighborhoods, paymentMethods }) {
+    const carts = useCart();
+    // Un checkout = le panier de CE commerce uniquement (les autres paniers ne sont pas touchés).
+    const cart = carts.cartOf(store.id) ?? { store, items: [] };
     const { user } = usePage().props.auth;
     // Le serveur refusera de toute façon une commande pour un commerce fermé.
-    const { status } = useStoreStatus(cart.store?.id);
+    const { status } = useStoreStatus(store.id, cart.items.map((item) => item.product_id));
     const closed = status !== null && !status.is_open_now;
     // Articles devenus indisponibles depuis leur ajout : à retirer depuis le panier.
     const unavailableIds = new Set(status?.unavailable_product_ids ?? []);
@@ -153,8 +155,8 @@ export default function Index({ neighborhoods, paymentMethods }) {
         }));
 
         post(route('orders.store'), {
-            // Panier vidé seulement une fois la commande enregistrée.
-            onSuccess: () => cart.clearCart(),
+            // Panier de ce commerce vidé seulement une fois la commande enregistrée.
+            onSuccess: () => carts.clearCart(store.id),
             onError: focusFirstError,
         });
     };
@@ -176,10 +178,10 @@ export default function Index({ neighborhoods, paymentMethods }) {
                         Ajoutez des articles avant de passer commande.
                     </p>
                     <Link
-                        href={route('home')}
+                        href={route('stores.show', store.id)}
                         className="mt-6 inline-block rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
                     >
-                        Voir les boutiques
+                        Retour chez {store.name}
                     </Link>
                 </div>
             </PublicLayout>
@@ -304,7 +306,7 @@ export default function Index({ neighborhoods, paymentMethods }) {
                             className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
                         >
                             {cartError}{' '}
-                            <Link href={route('cart')} className="font-medium underline">
+                            <Link href={route('cart', { store: cart.store.id })} className="font-medium underline">
                                 Voir mon panier
                             </Link>
                         </div>
@@ -319,7 +321,7 @@ export default function Index({ neighborhoods, paymentMethods }) {
                             <p className="font-semibold">
                                 Plus disponible : {unavailableItems.map((item) => item.name).join(', ')}.
                             </p>
-                            <Link href={route('cart')} className="mt-1 inline-block font-semibold underline">
+                            <Link href={route('cart', { store: cart.store.id })} className="mt-1 inline-block font-semibold underline">
                                 Mettre à jour mon panier
                             </Link>
                         </div>

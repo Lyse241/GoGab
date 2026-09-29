@@ -1,259 +1,77 @@
-import LazyImage from '@/Components/LazyImage';
-import QuantityStepper from '@/Components/QuantityStepper';
+import CartPanel from '@/Components/Cart/CartPanel';
+import { StoreThumb } from '@/Components/Cart/CartList';
+import Button from '@/Components/UI/Button';
+import Card from '@/Components/UI/Card';
+import EmptyState from '@/Components/UI/EmptyState';
 import { useCart } from '@/Contexts/CartContext';
-import useStoreStatus from '@/Hooks/useStoreStatus';
 import PublicLayout from '@/Layouts/PublicLayout';
-import { cartTotals } from '@/utils/cartTotals';
-import { formatFCFA, imageUrl } from '@/utils/format';
-import { Head, Link, usePage } from '@inertiajs/react';
-import { CircleAlert, Clock, Hourglass } from 'lucide-react';
+import { cn } from '@/utils/cn';
+import { Head, Link } from '@inertiajs/react';
+import { ShoppingBag } from 'lucide-react';
+import { useEffect } from 'react';
 
-function StoreClosedAlert({ status, storeName }) {
-    return (
-        <div role="alert" className="flex items-start gap-3 rounded-2xl border border-accent-300 bg-accent-50 p-4">
-            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-accent-700" aria-hidden="true" />
-            <div className="text-sm">
-                <p className="font-semibold text-secondary-900">
-                    {storeName} · {status.status_label}
-                </p>
-                <p className="mt-0.5 text-gray-700">
-                    Votre panier est conservé : vous pourrez commander dès la réouverture.
-                </p>
-            </div>
-        </div>
-    );
-}
+/**
+ * Tous les paniers en cours, un bloc par commerce (chacun se commande séparément).
+ * `openStore` (?store=) : panier mis en avant, par exemple au retour de la connexion.
+ */
+export default function Index({ openStore }) {
+    const { carts } = useCart();
 
-function CartLine({ item, unavailable = false, onQuantityChange, onRemove }) {
-    return (
-        <li className="flex gap-3 py-4">
-            <LazyImage
-                src={imageUrl(item.image)}
-                alt={item.name}
-                className={`h-20 w-20 shrink-0 rounded-lg ${unavailable ? 'opacity-50 grayscale' : ''}`}
-            />
+    // Le panier demandé d'abord.
+    const ordered = openStore
+        ? [...carts].sort((a, b) => (b.store.id === openStore) - (a.store.id === openStore))
+        : carts;
 
-            <div className="flex min-w-0 flex-1 flex-col">
-                <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                        <h3 className={`font-semibold ${unavailable ? 'text-gray-500' : 'text-gray-900'}`}>{item.name}</h3>
-                        {unavailable ? (
-                            <p className="text-sm font-semibold text-danger-700">Plus disponible : retirez-le pour commander</p>
-                        ) : (
-                            <p className="text-sm text-gray-500">
-                                {formatFCFA(item.price)} l'unité
-                            </p>
-                        )}
-                    </div>
-                    <button
-                        type="button"
-                        onClick={onRemove}
-                        aria-label={`Supprimer ${item.name} du panier`}
-                        className="-mr-1 rounded-full p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                    >
-                        <svg
-                            className="h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                            aria-hidden="true"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-                            />
-                        </svg>
-                    </button>
-                </div>
-
-                <div className="mt-auto flex items-center justify-between pt-2">
-                    {unavailable ? (
-                        <button
-                            type="button"
-                            onClick={onRemove}
-                            className="rounded-full px-3 py-1.5 text-sm font-semibold text-danger-600 ring-1 ring-inset ring-danger-200 hover:bg-danger-50"
-                        >
-                            Retirer
-                        </button>
-                    ) : (
-                    <QuantityStepper
-                        quantity={item.quantity}
-                        label={item.name}
-                        onChange={onQuantityChange}
-                    />
-                    )}
-                    <p className={`font-semibold ${unavailable ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                        {formatFCFA(item.price * item.quantity)}
-                    </p>
-                </div>
-            </div>
-        </li>
-    );
-}
-
-export default function Index() {
-    const cart = useCart();
-    // Vérification légère auprès du serveur : le commerce peut avoir fermé depuis l'ajout au panier.
-    const { status, loading } = useStoreStatus(cart.store?.id);
-    const closed = status !== null && !status.is_open_now;
-    // Articles devenus indisponibles depuis leur ajout (l'entreprise a changé son catalogue).
-    const unavailableIds = new Set(status?.unavailable_product_ids ?? []);
-    const unavailableItems = cart.items.filter((item) => unavailableIds.has(item.product_id));
-    const { total, count } = cartTotals(cart.items, unavailableIds);
-    // Client connecté mais pas encore validé : il peut préparer son panier, pas commander.
-    const { user } = usePage().props.auth;
-    const notApproved = Boolean(user) && user.account_status !== 'approved';
-
-    if (cart.items.length === 0) {
-        return (
-            <PublicLayout>
-                <Head title="Panier" />
-
-                <div className="mx-auto mt-16 max-w-md text-center">
-                    <p className="text-5xl" aria-hidden="true">
-                        🛍️
-                    </p>
-                    <h1 className="mt-4 text-xl font-bold text-gray-900">
-                        Votre panier est vide
-                    </h1>
-                    <p className="mt-2 text-gray-600">
-                        Parcourez les boutiques de Libreville et ajoutez vos
-                        premiers articles.
-                    </p>
-                    <Link
-                        href={route('home')}
-                        className="mt-6 inline-block rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
-                    >
-                        Voir les boutiques
-                    </Link>
-                </div>
-            </PublicLayout>
-        );
-    }
+    useEffect(() => {
+        if (openStore) {
+            document.getElementById(`cart-${openStore}`)?.scrollIntoView({ block: 'start' });
+        }
+    }, [openStore]);
 
     return (
         <PublicLayout>
-            <Head title="Panier" />
+            <Head title="Mes paniers" />
 
-            <div className="mx-auto max-w-2xl">
-                <div className="mt-6 flex items-baseline justify-between gap-2">
-                    <h1 className="text-2xl font-bold text-secondary">Mon panier</h1>
-                    <button
-                        type="button"
-                        onClick={cart.clearCart}
-                        className="text-sm font-medium text-red-600 hover:underline"
-                    >
-                        Vider le panier
-                    </button>
-                </div>
-                <p className="mt-1 text-sm text-gray-600">
-                    Boutique :{' '}
-                    <Link
-                        href={route('stores.show', cart.store.id)}
-                        className="font-medium text-secondary hover:underline"
-                    >
-                        {cart.store.name}
-                    </Link>
-                </p>
-
-                {closed && (
-                    <div className="mt-4">
-                        <StoreClosedAlert status={status} storeName={cart.store.name} />
-                    </div>
+            <div className="mx-auto max-w-2xl pt-6">
+                <h1 className="text-2xl font-bold text-secondary-900">Mes paniers</h1>
+                {carts.length > 1 && (
+                    <p className="mt-1 text-sm text-gray-600">
+                        {carts.length} commerces · un panier par commerce, chacun se commande séparément.
+                    </p>
                 )}
 
-                {notApproved && (
-                    <div role="status" className="mt-4 flex items-start gap-3 rounded-2xl border border-accent-300 bg-accent-50 p-4 text-sm">
-                        <Hourglass className="mt-0.5 h-5 w-5 shrink-0 text-accent-700" aria-hidden="true" />
-                        <div>
-                            <p className="font-semibold text-secondary-900">Votre compte est en cours de validation</p>
-                            <p className="mt-0.5 text-gray-700">
-                                Votre panier est conservé : vous pourrez commander dès que l’équipe Gogab aura validé votre compte.{' '}
-                                <Link href={route('dashboard')} className="font-medium text-secondary underline">
-                                    Suivre mon inscription
-                                </Link>
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                {unavailableItems.length > 0 && (
-                    <div role="alert" className="mt-4 flex items-start gap-3 rounded-2xl border border-danger-200 bg-danger-50 p-4 text-sm">
-                        <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-danger-600" aria-hidden="true" />
-                        <div>
-                            <p className="font-semibold text-danger-800">
-                                {unavailableItems.length > 1
-                                    ? `${unavailableItems.length} articles ne sont plus disponibles`
-                                    : `« ${unavailableItems[0].name} » n’est plus disponible`}
-                            </p>
-                            <button
-                                type="button"
-                                onClick={() => unavailableItems.forEach((item) => cart.removeItem(item.product_id))}
-                                className="mt-1 font-semibold text-danger-700 underline"
+                {carts.length === 0 ? (
+                    <EmptyState
+                        className="mt-6"
+                        icon={ShoppingBag}
+                        title="Votre panier est vide"
+                        description="Parcourez les commerces de Libreville et ajoutez vos premiers articles."
+                        action={<Button href={route('home')}>Voir les commerces</Button>}
+                    />
+                ) : (
+                    <div className="mt-5 space-y-5">
+                        {ordered.map((cart) => (
+                            <Card
+                                key={cart.store.id}
+                                id={`cart-${cart.store.id}`}
+                                as="section"
+                                aria-labelledby={`cart-title-${cart.store.id}`}
+                                className={cn('scroll-mt-[calc(var(--header-h,4rem)+1rem)]', cart.store.id === openStore && 'ring-2 ring-primary-200')}
                             >
-                                {unavailableItems.length > 1 ? 'Les retirer du panier' : 'Le retirer du panier'}
-                            </button>
-                        </div>
+                                <Link
+                                    href={route('stores.show', cart.store.id)}
+                                    className="mb-2 flex items-center gap-3 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                >
+                                    <StoreThumb store={cart.store} className="h-11 w-11" />
+                                    <h2 id={`cart-title-${cart.store.id}`} className="truncate text-lg font-bold text-secondary-900">
+                                        {cart.store.name}
+                                    </h2>
+                                </Link>
+                                <CartPanel cart={cart} />
+                            </Card>
+                        ))}
                     </div>
                 )}
-
-                <ul className="mt-4 divide-y divide-gray-200 rounded-xl bg-white px-4 shadow-sm ring-1 ring-gray-200">
-                    {cart.items.map((item) => (
-                        <CartLine
-                            key={item.product_id}
-                            item={item}
-                            unavailable={unavailableIds.has(item.product_id)}
-                            onQuantityChange={(quantity) =>
-                                cart.updateQuantity(item.product_id, quantity)
-                            }
-                            onRemove={() => cart.removeItem(item.product_id)}
-                        />
-                    ))}
-                </ul>
-
-                <div className="mt-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
-                    <div className="flex items-center justify-between">
-                        <span className="text-gray-600">
-                            Total ({count} article
-                            {count > 1 ? 's' : ''})
-                        </span>
-                        <span className="text-xl font-bold text-gray-900">
-                            {formatFCFA(total)}
-                        </span>
-                    </div>
-
-                    {closed || loading || notApproved || unavailableItems.length > 0 ? (
-                        <button
-                            type="button"
-                            disabled
-                            aria-busy={loading || undefined}
-                            className="mt-4 block w-full cursor-not-allowed rounded-full bg-gray-200 py-3 text-center font-semibold text-gray-500"
-                        >
-                            {notApproved
-                                ? 'Compte en attente de validation'
-                                : loading
-                                  ? 'Vérification des horaires…'
-                                  : closed
-                                    ? 'Commerce fermé'
-                                    : 'Retirez les articles indisponibles'}
-                        </button>
-                    ) : (
-                        <Link
-                            href={route('checkout')}
-                            className="mt-4 block w-full rounded-full bg-primary-600 py-3 text-center font-semibold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                        >
-                            Passer commande
-                        </Link>
-                    )}
-                    <Link
-                        href={route('stores.show', cart.store.id)}
-                        className="mt-2 block text-center text-sm font-medium text-secondary hover:underline"
-                    >
-                        Continuer mes achats
-                    </Link>
-                </div>
             </div>
         </PublicLayout>
     );

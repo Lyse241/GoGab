@@ -1,51 +1,61 @@
-import {
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useMemo,
-    useReducer,
-} from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState } from 'react';
 
-const STORAGE_KEY = 'gogab_cart';
+const STORAGE_KEY = 'gogab_carts';
+// Ancien format (un seul panier) : repris une fois puis supprimé.
+const LEGACY_KEY = 'gogab_cart';
 export const MAX_QUANTITY = 99;
 
 /**
- * Forme du panier :
+ * Paniers de Gogab : UN panier par commerce, jamais mélangés.
+ *
  * {
- *   store: { id, name } | null,   // une seule boutique à la fois
- *   items: [{ product_id, name, price, image, quantity }]
+ *   [storeId]: {
+ *     store: { id, name, logo },
+ *     items: [{ product_id, name, price, image, quantity }],
+ *     updated_at: timestamp (ordre d'affichage : le plus récent d'abord)
+ *   }
  * }
- * Les infos produit sont une copie pour l'affichage : le serveur recalculera
- * les prix au moment de la commande.
+ *
+ * Un produit va toujours dans le panier de SON commerce (créé au besoin) : aucune action ne
+ * permet de le placer ailleurs, et ajouter chez un commerce ne touche jamais aux autres paniers.
+ * Les infos produit sont une copie pour l'affichage : le serveur recalcule les prix à la commande.
  */
-const emptyCart = { store: null, items: [] };
+const clampQuantity = (quantity) => Math.min(MAX_QUANTITY, Math.max(0, Math.floor(Number(quantity) || 0)));
 
-const clampQuantity = (quantity) =>
-    Math.min(MAX_QUANTITY, Math.max(0, Math.floor(Number(quantity) || 0)));
+/**
+ * Remplace les items d'un panier ; un panier vide est supprimé (nettoyage automatique).
+ */
+function withItems(state, storeId, items) {
+    const { [storeId]: current, ...others } = state;
 
-export function cartReducer(state, action) {
+    if (!current || items.length === 0) {
+        return others;
+    }
+
+    return { ...others, [storeId]: { ...current, items, updated_at: Date.now() } };
+}
+
+export function cartsReducer(state, action) {
     switch (action.type) {
         case 'add': {
             const { product, store, quantity } = action;
-            // Boutique différente : on repart d'un panier vide (confirmation gérée par l'UI).
-            const base =
-                state.store && state.store.id !== store.id ? emptyCart : state;
-            const existing = base.items.find(
-                (item) => item.product_id === product.id,
-            );
+            // Le panier est toujours celui du commerce du produit.
+            const storeId = product.store_id ?? store.id;
 
+            if (product.store_id !== undefined && product.store_id !== store.id) {
+                return state;
+            }
+
+            const current = state[storeId] ?? { store: null, items: [] };
+            const existing = current.items.find((item) => item.product_id === product.id);
             const items = existing
-                ? base.items.map((item) =>
+                ? current.items.map((item) =>
                       item.product_id === product.id
-                          ? {
-                                ...item,
-                                quantity: clampQuantity(item.quantity + quantity),
-                            }
+                          ? { ...item, quantity: clampQuantity(item.quantity + quantity) }
                           : item,
                   )
                 : [
-                      ...base.items,
+                      ...current.items,
                       {
                           product_id: product.id,
                           name: product.name,
@@ -55,36 +65,44 @@ export function cartReducer(state, action) {
                       },
                   ];
 
-            return { store: { id: store.id, name: store.name }, items };
+            return {
+                ...state,
+                [storeId]: {
+                    store: { id: store.id, name: store.name, logo: store.logo ?? null },
+                    items,
+                    updated_at: Date.now(),
+                },
+            };
         }
 
         case 'update': {
+            const current = state[action.storeId];
+            if (!current) {
+                return state;
+            }
+
             const quantity = clampQuantity(action.quantity);
             const items =
                 quantity === 0
-                    ? state.items.filter((item) => item.product_id !== action.productId)
-                    : state.items.map((item) =>
-                          item.product_id === action.productId
-                              ? { ...item, quantity }
-                              : item,
-                      );
+                    ? current.items.filter((item) => item.product_id !== action.productId)
+                    : current.items.map((item) => (item.product_id === action.productId ? { ...item, quantity } : item));
 
-            return items.length ? { ...state, items } : emptyCart;
+            return withItems(state, action.storeId, items);
         }
 
         case 'remove': {
-            const items = state.items.filter(
-                (item) => item.product_id !== action.productId,
-            );
+            const current = state[action.storeId];
 
-            return items.length ? { ...state, items } : emptyCart;
+            return current
+                ? withItems(state, action.storeId, current.items.filter((item) => !action.productIds.includes(item.product_id)))
+                : state;
         }
 
         case 'clear':
-            return emptyCart;
+            return withItems(state, action.storeId, []);
 
         case 'replace':
-            return action.cart;
+            return action.carts;
 
         default:
             return state;
@@ -92,104 +110,111 @@ export function cartReducer(state, action) {
 }
 
 /**
- * Lit le panier sauvegardé ; toute donnée invalide ou corrompue donne un panier vide.
+ * Nettoie des paniers lus depuis le stockage : données invalides ignorées, paniers vides retirés.
  */
-function loadCart() {
-    try {
-        const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY));
+function sanitize(raw) {
+    const carts = {};
 
-        if (
-            saved &&
-            Array.isArray(saved.items) &&
-            saved.items.length > 0 &&
-            saved.store?.id
-        ) {
-            const items = saved.items
-                .filter((item) => item.product_id && clampQuantity(item.quantity) > 0)
-                .map((item) => ({
-                    ...item,
-                    price: Number(item.price) || 0,
-                    quantity: clampQuantity(item.quantity),
-                }));
-
-            return items.length ? { store: saved.store, items } : emptyCart;
+    Object.values(raw && typeof raw === 'object' ? raw : {}).forEach((cart) => {
+        const id = Number(cart?.store?.id);
+        if (!id || !Array.isArray(cart.items)) {
+            return;
         }
+
+        const items = cart.items
+            .filter((item) => item?.product_id && clampQuantity(item.quantity) > 0)
+            .map((item) => ({ ...item, price: Number(item.price) || 0, quantity: clampQuantity(item.quantity) }));
+
+        if (items.length > 0) {
+            carts[id] = { store: { id, name: cart.store.name ?? '', logo: cart.store.logo ?? null }, items, updated_at: Number(cart.updated_at) || 0 };
+        }
+    });
+
+    return carts;
+}
+
+function loadCarts() {
+    try {
+        const saved = window.localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            return sanitize(JSON.parse(saved));
+        }
+
+        // Reprise de l'ancien panier unique.
+        const legacy = JSON.parse(window.localStorage.getItem(LEGACY_KEY));
+        window.localStorage.removeItem(LEGACY_KEY);
+
+        return legacy?.store ? sanitize({ [legacy.store.id]: legacy }) : {};
     } catch {
         // localStorage indisponible (navigation privée…) ou JSON invalide.
+        return {};
     }
-
-    return emptyCart;
 }
+
+const subtotalOf = (items) => Math.round(items.reduce((sum, item) => sum + item.price * item.quantity, 0) * 100) / 100;
+const countOf = (items) => items.reduce((sum, item) => sum + item.quantity, 0);
 
 const CartContext = createContext(null);
 
 export function CartProvider({ children }) {
-    const [cart, dispatch] = useReducer(cartReducer, undefined, loadCart);
+    const [carts, dispatch] = useReducer(cartsReducer, undefined, loadCarts);
+    // Tiroir du panier : null (fermé), 'list' (tous les paniers) ou l'id d'un commerce.
+    const [drawer, setDrawer] = useState(null);
 
-    // Sauvegarde à chaque modification.
+    // Sauvegarde à chaque modification (les paniers vides ont déjà été retirés).
     useEffect(() => {
         try {
-            if (cart.items.length) {
-                window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+            if (Object.keys(carts).length) {
+                window.localStorage.setItem(STORAGE_KEY, JSON.stringify(carts));
             } else {
                 window.localStorage.removeItem(STORAGE_KEY);
             }
         } catch {
-            // Stockage plein ou bloqué : le panier reste utilisable en mémoire.
+            // Stockage plein ou bloqué : les paniers restent utilisables en mémoire.
         }
-    }, [cart]);
+    }, [carts]);
 
-    // Synchronise les onglets ouverts en même temps.
+    // Paniers modifiés dans un autre onglet.
     useEffect(() => {
         const onStorage = (event) => {
             if (event.key === STORAGE_KEY) {
-                dispatch({ type: 'replace', cart: loadCart() });
+                dispatch({ type: 'replace', carts: loadCarts() });
             }
         };
-
         window.addEventListener('storage', onStorage);
 
         return () => window.removeEventListener('storage', onStorage);
     }, []);
 
-    const addItem = useCallback(
-        (product, store, quantity = 1) =>
-            dispatch({ type: 'add', product, store, quantity }),
-        [],
-    );
-    const updateQuantity = useCallback(
-        (productId, quantity) => dispatch({ type: 'update', productId, quantity }),
-        [],
-    );
-    const removeItem = useCallback(
-        (productId) => dispatch({ type: 'remove', productId }),
-        [],
-    );
-    const clearCart = useCallback(() => dispatch({ type: 'clear' }), []);
+    const addItem = useCallback((product, store, quantity = 1) => dispatch({ type: 'add', product, store, quantity }), []);
+    const updateQuantity = useCallback((storeId, productId, quantity) => dispatch({ type: 'update', storeId, productId, quantity }), []);
+    const removeItems = useCallback((storeId, productIds) => dispatch({ type: 'remove', storeId, productIds }), []);
+    const clearCart = useCallback((storeId) => dispatch({ type: 'clear', storeId }), []);
 
     const value = useMemo(() => {
-        const total = cart.items.reduce(
-            (sum, item) => sum + item.price * item.quantity,
-            0,
-        );
+        // Plus récemment modifié d'abord.
+        const list = Object.values(carts)
+            .sort((a, b) => b.updated_at - a.updated_at)
+            .map((cart) => ({ ...cart, count: countOf(cart.items), subtotal: subtotalOf(cart.items) }));
 
         return {
-            store: cart.store,
-            items: cart.items,
-            itemCount: cart.items.reduce((sum, item) => sum + item.quantity, 0),
-            total: Math.round(total * 100) / 100,
+            carts: list,
+            itemCount: list.reduce((sum, cart) => sum + cart.count, 0),
+            cartOf: (storeId) => list.find((cart) => cart.store.id === Number(storeId)) ?? null,
+            quantityOf: (storeId, productId) =>
+                carts[storeId]?.items.find((item) => item.product_id === productId)?.quantity ?? 0,
             addItem,
             updateQuantity,
-            removeItem,
+            removeItem: (storeId, productId) => removeItems(storeId, [productId]),
+            removeItems,
             clearCart,
-            // Vrai si ajouter un produit de cette boutique viderait le panier actuel.
-            isFromOtherStore: (storeId) =>
-                cart.store !== null && cart.store.id !== storeId,
-            quantityOf: (productId) =>
-                cart.items.find((item) => item.product_id === productId)
-                    ?.quantity ?? 0,
+            // Tiroir : un panier, ou la liste (qui ouvre directement l'unique panier s'il n'y en a qu'un).
+            drawer,
+            openCart: (storeId) => setDrawer(Number(storeId)),
+            openCarts: () => setDrawer(list.length === 1 ? list[0].store.id : 'list'),
+            closeDrawer: () => setDrawer(null),
         };
-    }, [cart, addItem, updateQuantity, removeItem, clearCart]);
+    }, [carts, drawer, addItem, updateQuantity, removeItems, clearCart]);
 
     return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

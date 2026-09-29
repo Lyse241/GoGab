@@ -1,4 +1,5 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import CartDrawer from '@/Components/Cart/CartDrawer';
 import CartButton from '@/Components/Layout/CartButton';
 import NeighborhoodSelector from '@/Components/Layout/NeighborhoodSelector';
 import NotificationBell from '@/Components/Layout/NotificationBell';
@@ -111,6 +112,9 @@ export default function PublicLayout({
             <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-12 sm:px-6">{children}</main>
 
             <WarningNotice />
+
+            {/* Tiroir des paniers (ouvert depuis le header, la page commerce…). */}
+            <CartDrawer />
 
             <PublicFooter />
         </div>

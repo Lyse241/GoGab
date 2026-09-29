@@ -73,7 +73,7 @@ class SearchController extends Controller
                 ->groupBy('store_id')
                 ->map(fn ($items) => [
                     'store' => $this->presentStore($items->first()->store),
-                    'products' => $items->map(fn (Product $product) => $product->only(['id', 'menu_section', 'name', 'description', 'price', 'image', 'is_available']))->values(),
+                    'products' => $items->map(fn (Product $product) => $product->only(['id', 'store_id', 'menu_section', 'name', 'description', 'price', 'image', 'is_available']))->values(),
                 ])
                 ->sortBy([['store.is_open_now', 'desc'], ['store.name', 'asc']])
                 ->values(),

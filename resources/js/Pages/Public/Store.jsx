@@ -4,13 +4,12 @@ import ProductCard from '@/Components/ProductCard';
 import Badge from '@/Components/UI/Badge';
 import EmptyState from '@/Components/UI/EmptyState';
 import { useCart } from '@/Contexts/CartContext';
-import useAddToCart from '@/Hooks/useAddToCart';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { cartTotals } from '@/utils/cartTotals';
 import { cn } from '@/utils/cn';
 import { formatFCFA, imageUrl } from '@/utils/format';
 import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft, Clock, MapPin, Package, Search, SearchX, Store as StoreIcon, X } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Clock, MapPin, Package, Search, SearchX, ShoppingBag, Store as StoreIcon, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 const OTHERS = 'Autres produits';
@@ -117,7 +116,6 @@ function StoreHeader({ store }) {
  */
 export default function Store({ store, products }) {
     const cart = useCart();
-    const { add, dialog } = useAddToCart();
     const [query, setQuery] = useState('');
     const [active, setActive] = useState(null);
 
@@ -172,9 +170,10 @@ export default function Store({ store, products }) {
         window.history.replaceState(null, '', `#${id}`);
     };
 
-    const cartIsHere = cart.store?.id === store.id && cart.itemCount > 0;
+    // Barre flottante : uniquement le panier de CE commerce (hors produits devenus indisponibles).
+    const storeCart = cart.cartOf(store.id);
     const { total, count } = cartTotals(
-        cart.items,
+        storeCart?.items ?? [],
         new Set(products.filter((product) => !product.is_available).map((product) => product.id)),
     );
 
@@ -291,10 +290,10 @@ export default function Store({ store, products }) {
                                                 key={product.id}
                                                 product={product}
                                                 canOrder={canOrder}
-                                                quantity={cart.store?.id === store.id ? cart.quantityOf(product.id) : 0}
-                                                onAdd={() => add(product, store)}
-                                                onQuantityChange={(quantity) => cart.updateQuantity(product.id, quantity)}
-                                                onRemove={() => cart.removeItem(product.id)}
+                                                quantity={cart.quantityOf(store.id, product.id)}
+                                                onAdd={() => cart.addItem(product, store)}
+                                                onQuantityChange={(quantity) => cart.updateQuantity(store.id, product.id, quantity)}
+                                                onRemove={() => cart.removeItem(store.id, product.id)}
                                             />
                                         ))}
                                     </div>
@@ -305,30 +304,32 @@ export default function Store({ store, products }) {
                 </>
             )}
 
-            {/* Récapitulatif fixé en bas de l'écran (à portée de pouce sur mobile) */}
-            {cartIsHere && count > 0 && (
+            {/* Barre flottante « Voir mon panier » : panier de CE commerce seulement, à portée de pouce. */}
+            {count > 0 && (
                 <>
-                    <div className="h-20" aria-hidden="true" />
-                    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-gray-200 bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
-                        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-1 sm:px-6">
-                            <div>
-                                <p className="text-sm text-gray-600">
-                                    Panier · {count} article{count > 1 ? 's' : ''}
-                                </p>
-                                <p className="text-lg font-bold text-gray-900">{formatFCFA(total)}</p>
-                            </div>
-                            <Link
-                                href={route('cart')}
-                                className="inline-flex min-h-tap items-center rounded-full bg-primary-600 px-6 text-sm font-semibold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                    <div className="h-24" aria-hidden="true" />
+                    <div className="fixed inset-x-0 bottom-0 z-20 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
+                        <div className="mx-auto max-w-6xl sm:flex sm:justify-end">
+                            <button
+                                type="button"
+                                onClick={() => cart.openCart(store.id)}
+                                className="flex h-14 w-full items-center gap-3 rounded-full bg-primary-600 pl-2 pr-5 text-white shadow-xl transition hover:bg-primary-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-300 sm:w-auto sm:min-w-[22rem]"
                             >
-                                Voir le panier
-                            </Link>
+                                <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15">
+                                    <ShoppingBag className="h-5 w-5" aria-hidden="true" />
+                                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-bold text-secondary-900">
+                                        {count}
+                                    </span>
+                                </span>
+                                <span className="flex-1 text-left font-semibold">
+                                    Voir mon panier · {formatFCFA(total)}
+                                </span>
+                                <ChevronRight className="h-5 w-5 shrink-0" aria-hidden="true" />
+                            </button>
                         </div>
                     </div>
                 </>
             )}
-
-            {dialog}
         </PublicLayout>
     );
 }

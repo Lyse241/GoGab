@@ -132,15 +132,26 @@ class StoreController extends Controller
     /**
      * État d'ouverture et produits indisponibles en JSON (vérification légère du panier et du checkout).
      */
-    public function status(Store $store): JsonResponse
+    public function status(Request $request, Store $store): JsonResponse
     {
         abort_unless($store->isVisible(), 404);
+
+        // Produits du panier (?products=1,2,3) : ceux qui n'existent plus dans ce commerce
+        // (supprimés entre-temps) sont aussi signalés comme indisponibles.
+        $requested = collect(explode(',', (string) $request->query('products', '')))
+            ->map(fn (string $id) => (int) $id)
+            ->filter()
+            ->take(200);
+        $existing = $requested->isEmpty() ? collect() : $store->products()->whereIn('id', $requested)->pluck('id');
 
         return response()->json([
             'store_id' => $store->id,
             ...$store->load('openingHours')->openingStatus(),
             // Pour signaler dans le panier un article devenu indisponible depuis son ajout.
-            'unavailable_product_ids' => $store->products()->where('is_available', false)->pluck('id'),
+            'unavailable_product_ids' => $store->products()->where('is_available', false)->pluck('id')
+                ->merge($requested->diff($existing))
+                ->unique()
+                ->values(),
         ]);
     }
 
