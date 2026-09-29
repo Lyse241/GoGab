@@ -7,8 +7,11 @@ use App\Enums\PaymentMethod;
 use App\Http\Requests\StoreOrderRequest;
 use App\Models\Order;
 use App\Services\OrderWorkflow;
+use App\Support\OrderTimeline;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -47,7 +50,7 @@ class OrderController extends Controller
      */
     public function confirmation(Request $request, Order $order): Response
     {
-        abort_unless($request->user()->can('view', $order), 404);
+        Gate::authorize('view', $order);
 
         $order->load('store:id,name');
 
@@ -88,20 +91,62 @@ class OrderController extends Controller
     }
 
     /**
-     * Page de confirmation / détail d'une commande du client connecté.
+     * « Mes commandes » : onglets En cours / Terminées, liste paginée (plus récentes d'abord).
      */
-    public function show(Request $request, Order $order): Response
+    public function index(Request $request): Response
     {
-        // OrderPolicy::view ; 404 plutôt que 403 : on ne révèle pas l'existence de la commande.
-        abort_unless($request->user()->can('view', $order), 404);
+        $tab = $request->query('tab') === 'finished' ? 'finished' : 'ongoing';
+        $finished = array_filter(OrderStatus::cases(), fn (OrderStatus $status) => $status->isFinal());
+        $mine = fn () => Order::where('client_id', $request->user()->id);
 
-        $order->load(['store:id,name', 'neighborhood:id,name', 'items.product:id,name,image', 'statusHistories']);
+        $orders = $mine()
+            ->when($tab === 'finished',
+                fn ($query) => $query->whereIn('status', $finished),
+                fn ($query) => $query->whereNotIn('status', $finished))
+            ->with('store:id,name,logo')
+            ->withSum('items as items_count', 'quantity')
+            ->latest()
+            ->latest('id')
+            ->paginate(10)
+            ->withQueryString()
+            ->through(fn (Order $order) => [
+                'id' => $order->id,
+                'number' => $order->reference,
+                'store' => $order->store?->only(['id', 'name', 'logo']),
+                'status' => $order->status->value,
+                'total_price' => $order->total_price,
+                'items_count' => (int) $order->items_count,
+                'created_at' => $order->created_at->setTimezone(config('gogab.timezone'))->format('d/m/Y à H\hi'),
+            ]);
+
+        return Inertia::render('Orders/Index', [
+            'orders' => $orders,
+            'tab' => $tab,
+            'counts' => [
+                'ongoing' => $mine()->whereNotIn('status', $finished)->count(),
+                'finished' => $mine()->whereIn('status', $finished)->count(),
+            ],
+        ]);
+    }
+
+    /**
+     * Suivi d'une commande : récapitulatif, timeline (order_status_histories), livreur assigné,
+     * annulation tant qu'elle est en attente. Rafraîchi toutes les 10 s par la page.
+     */
+    public function show(Request $request, Order $order, OrderWorkflow $workflow): Response
+    {
+        // OrderPolicy::view : 403 si la commande n'est pas la sienne.
+        Gate::authorize('view', $order);
+
+        $order->load(['store:id,name,logo,phone', 'neighborhood:id,name', 'items.product:id,name,image', 'statusHistories', 'delivery.deliveryProfile']);
+        $courier = $order->delivery;
 
         return Inertia::render('Orders/Show', [
             'order' => [
                 'id' => $order->id,
                 'number' => $order->reference,
                 'status' => $order->status->value,
+                'is_final' => $order->status->isFinal(),
                 'subtotal' => $order->subtotal,
                 'delivery_fee' => $order->delivery_fee,
                 'total_price' => $order->total_price,
@@ -112,15 +157,18 @@ class OrderController extends Controller
                 'change_due' => $order->change_due,
                 'client_note' => $order->client_note,
                 'cancel_reason' => $order->cancel_reason,
-                // Étapes déjà franchies (heure de Libreville).
-                'history' => $order->statusHistories->map(fn ($entry) => [
-                    'status' => $entry->status->value,
-                    'label' => $entry->status->label(),
-                    'at' => $entry->created_at->setTimezone(config('gogab.timezone'))->format('d/m à H\hi'),
-                ]),
                 'neighborhood' => $order->neighborhood->name,
-                'store' => $order->store->name,
+                'store' => $order->store->only(['id', 'name', 'logo']),
                 'created_at' => $order->created_at->setTimezone(config('gogab.timezone'))->format('d/m/Y à H\hi'),
+                'timeline' => OrderTimeline::for($order),
+                // Livreur : prénom, véhicule et téléphone une fois assigné (pas de nom complet).
+                'courier' => $courier ? [
+                    'first_name' => Str::before(trim($courier->name), ' ') ?: $courier->name,
+                    'vehicle' => $courier->deliveryProfile?->vehicle_type->label(),
+                    'vehicle_brand' => $courier->deliveryProfile?->vehicle_brand,
+                    'phone' => $order->status->isFinal() ? null : $courier->phone,
+                ] : null,
+                'can_cancel' => in_array(OrderStatus::Cancelled, $workflow->allowedTransitions($order, $request->user()), true),
                 'items' => $order->items->map(fn ($item) => [
                     'id' => $item->id,
                     'name' => $item->product->name,

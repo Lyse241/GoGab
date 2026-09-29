@@ -48,6 +48,11 @@ Route::get('/checkout/{store}', [CheckoutController::class, 'create'])
 Route::middleware(['auth', 'role:client', 'approved'])->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'legacy']);
     Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
+});
+
+// Mes commandes et suivi : réservés au client (OrderPolicy::view → 403 sur la commande d'un autre).
+Route::middleware(['auth', 'role:client'])->group(function () {
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}/confirmation', [OrderController::class, 'confirmation'])->name('orders.confirmation');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 });

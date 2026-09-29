@@ -50,6 +50,7 @@ export default function PublicFooter() {
                     <FooterLink href={route('cart')}>Mon panier</FooterLink>
                     {user ? (
                         <>
+                            {user.role === 'client' && <FooterLink href={route('orders.index')}>Mes commandes</FooterLink>}
                             <FooterLink href={route('notifications.index')}>Mes notifications</FooterLink>
                             <FooterLink href={route('profile.edit')}>Mon compte</FooterLink>
                         </>

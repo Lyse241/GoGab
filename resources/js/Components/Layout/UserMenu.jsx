@@ -2,7 +2,7 @@ import StatusBadge from '@/Components/UI/StatusBadge';
 import { cn } from '@/utils/cn';
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { Link, usePage } from '@inertiajs/react';
-import { Bike, ChevronDown, Hourglass, LayoutDashboard, LogOut, ShieldCheck, Store, TriangleAlert, UserRound } from 'lucide-react';
+import { Bike, ChevronDown, Hourglass, LayoutDashboard, LogOut, ReceiptText, ShieldCheck, Store, TriangleAlert, UserRound } from 'lucide-react';
 
 /**
  * Avatar à initiales. `initials` vient du serveur (auth.user.initials) ; à défaut, calculé depuis le nom.
@@ -99,6 +99,14 @@ export default function UserMenu({ showDashboard = true, compact = false }) {
                             <Link href={route('dashboard')} className={itemClasses}>
                                 <SpaceIcon className="h-5 w-5 text-gray-500" aria-hidden="true" />
                                 {space.label}
+                            </Link>
+                        </MenuItem>
+                    )}
+                    {role === 'client' && (
+                        <MenuItem>
+                            <Link href={route('orders.index')} className={itemClasses}>
+                                <ReceiptText className="h-5 w-5 text-gray-500" aria-hidden="true" />
+                                Mes commandes
                             </Link>
                         </MenuItem>
                     )}

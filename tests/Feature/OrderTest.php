@@ -168,7 +168,7 @@ class OrderTest extends TestCase
 
         $this->actingAs(User::factory()->create(['role' => 'client']))
             ->get("/orders/{$order->id}/confirmation")
-            ->assertNotFound();
+            ->assertForbidden();
     }
 
     public function test_cash_order_requires_an_amount_covering_the_total(): void
@@ -324,15 +324,16 @@ class OrderTest extends TestCase
                 ->component('Orders/Show')
                 ->where('order.number', $order->reference)
                 ->where('order.neighborhood', 'Glass')
-                ->where('order.store', 'Chez Test')
+                ->where('order.store.name', 'Chez Test')
                 ->where('order.status', 'en_attente')
                 ->where('order.subtotal', '9000.00')
                 ->where('order.delivery_fee', '1000.00')
                 ->where('order.total_price', '10000.00')
                 ->where('order.payment_method_label', 'Airtel Money')
                 ->where('order.change_due', null)
-                ->has('order.history', 1)
-                ->where('order.history.0.label', 'En attente')
+                ->has('order.timeline', 8)
+                ->where('order.timeline.0.label', 'Commande envoyée')
+                ->where('order.timeline.0.state', 'current')
                 ->has('order.items', 1)
                 ->where('order.items.0.quantity', 2));
     }
@@ -344,6 +345,6 @@ class OrderTest extends TestCase
 
         $other = User::factory()->create(['role' => 'client']);
 
-        $this->actingAs($other)->get('/orders/'.Order::sole()->id)->assertNotFound();
+        $this->actingAs($other)->get('/orders/'.Order::sole()->id)->assertForbidden();
     }
 }
