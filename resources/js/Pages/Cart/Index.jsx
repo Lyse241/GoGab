@@ -1,9 +1,27 @@
 import LazyImage from '@/Components/LazyImage';
 import QuantityStepper from '@/Components/QuantityStepper';
 import { useCart } from '@/Contexts/CartContext';
+import useStoreStatus from '@/Hooks/useStoreStatus';
 import PublicLayout from '@/Layouts/PublicLayout';
-import { formatPrice, imageUrl } from '@/utils/format';
-import { Head, Link } from '@inertiajs/react';
+import { formatFCFA, imageUrl } from '@/utils/format';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { Clock, Hourglass } from 'lucide-react';
+
+function StoreClosedAlert({ status, storeName }) {
+    return (
+        <div role="alert" className="flex items-start gap-3 rounded-2xl border border-accent-300 bg-accent-50 p-4">
+            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-accent-700" aria-hidden="true" />
+            <div className="text-sm">
+                <p className="font-semibold text-secondary-900">
+                    {storeName} · {status.status_label}
+                </p>
+                <p className="mt-0.5 text-gray-700">
+                    Votre panier est conservé : vous pourrez commander dès la réouverture.
+                </p>
+            </div>
+        </div>
+    );
+}
 
 function CartLine({ item, onQuantityChange, onRemove }) {
     return (
@@ -19,7 +37,7 @@ function CartLine({ item, onQuantityChange, onRemove }) {
                     <div className="min-w-0">
                         <h3 className="font-semibold text-gray-900">{item.name}</h3>
                         <p className="text-sm text-gray-500">
-                            {formatPrice(item.price)} l'unité
+                            {formatFCFA(item.price)} l'unité
                         </p>
                     </div>
                     <button
@@ -52,7 +70,7 @@ function CartLine({ item, onQuantityChange, onRemove }) {
                         onChange={onQuantityChange}
                     />
                     <p className="font-semibold text-gray-900">
-                        {formatPrice(item.price * item.quantity)}
+                        {formatFCFA(item.price * item.quantity)}
                     </p>
                 </div>
             </div>
@@ -62,6 +80,12 @@ function CartLine({ item, onQuantityChange, onRemove }) {
 
 export default function Index() {
     const cart = useCart();
+    // Vérification légère auprès du serveur : le commerce peut avoir fermé depuis l'ajout au panier.
+    const { status, loading } = useStoreStatus(cart.store?.id);
+    const closed = status !== null && !status.is_open_now;
+    // Client connecté mais pas encore validé : il peut préparer son panier, pas commander.
+    const { user } = usePage().props.auth;
+    const notApproved = Boolean(user) && user.account_status !== 'approved';
 
     if (cart.items.length === 0) {
         return (
@@ -115,6 +139,27 @@ export default function Index() {
                     </Link>
                 </p>
 
+                {closed && (
+                    <div className="mt-4">
+                        <StoreClosedAlert status={status} storeName={cart.store.name} />
+                    </div>
+                )}
+
+                {notApproved && (
+                    <div role="status" className="mt-4 flex items-start gap-3 rounded-2xl border border-accent-300 bg-accent-50 p-4 text-sm">
+                        <Hourglass className="mt-0.5 h-5 w-5 shrink-0 text-accent-700" aria-hidden="true" />
+                        <div>
+                            <p className="font-semibold text-secondary-900">Votre compte est en cours de validation</p>
+                            <p className="mt-0.5 text-gray-700">
+                                Votre panier est conservé : vous pourrez commander dès que l’équipe Gogab aura validé votre compte.{' '}
+                                <Link href={route('dashboard')} className="font-medium text-secondary underline">
+                                    Suivre mon inscription
+                                </Link>
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 <ul className="mt-4 divide-y divide-gray-200 rounded-xl bg-white px-4 shadow-sm ring-1 ring-gray-200">
                     {cart.items.map((item) => (
                         <CartLine
@@ -135,16 +180,27 @@ export default function Index() {
                             {cart.itemCount > 1 ? 's' : ''})
                         </span>
                         <span className="text-xl font-bold text-gray-900">
-                            {formatPrice(cart.total)}
+                            {formatFCFA(cart.total)}
                         </span>
                     </div>
 
-                    <Link
-                        href={route('checkout')}
-                        className="mt-4 block w-full rounded-full bg-primary-600 py-3 text-center font-semibold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                    >
-                        Passer commande
-                    </Link>
+                    {closed || loading || notApproved ? (
+                        <button
+                            type="button"
+                            disabled
+                            aria-busy={loading || undefined}
+                            className="mt-4 block w-full cursor-not-allowed rounded-full bg-gray-200 py-3 text-center font-semibold text-gray-500"
+                        >
+                            {notApproved ? 'Compte en attente de validation' : loading ? 'Vérification des horaires…' : 'Commerce fermé'}
+                        </button>
+                    ) : (
+                        <Link
+                            href={route('checkout')}
+                            className="mt-4 block w-full rounded-full bg-primary-600 py-3 text-center font-semibold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                        >
+                            Passer commande
+                        </Link>
+                    )}
                     <Link
                         href={route('stores.show', cart.store.id)}
                         className="mt-2 block text-center text-sm font-medium text-secondary hover:underline"

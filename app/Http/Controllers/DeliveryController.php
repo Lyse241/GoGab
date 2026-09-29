@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,10 +17,10 @@ class DeliveryController extends Controller
     public function dashboard(Request $request): Response
     {
         $user = $request->user();
-        $relations = ['neighborhood:id,name', 'client:id,name,phone', 'items.product:id,store_id,name', 'items.product.store:id,name'];
+        $relations = ['store:id,name', 'neighborhood:id,name', 'client:id,name,phone', 'items.product:id,name'];
 
         $available = Order::with($relations)
-            ->where('status', Order::STATUS_PENDING)
+            ->where('status', OrderStatus::Pending)
             ->whereNull('delivery_id')
             ->oldest()
             ->get();
@@ -35,7 +36,7 @@ class DeliveryController extends Controller
             'available' => $available->map(fn (Order $order) => $this->present($order, withClient: false)),
             'mine' => $mine->map(fn (Order $order) => $this->present($order, withClient: true)),
             'deliveredToday' => $user->deliveries()
-                ->where('status', Order::STATUS_DELIVERED)
+                ->where('status', OrderStatus::Delivered)
                 ->whereDate('updated_at', today())
                 ->count(),
         ]);
@@ -49,19 +50,21 @@ class DeliveryController extends Controller
         // Mise à jour conditionnelle : si deux livreurs cliquent en même temps,
         // un seul UPDATE trouve encore la commande libre.
         $taken = Order::whereKey($order->id)
-            ->where('status', Order::STATUS_PENDING)
+            ->where('status', OrderStatus::Pending)
             ->whereNull('delivery_id')
             ->update([
                 'delivery_id' => $request->user()->id,
-                'status' => Order::STATUS_ACCEPTED,
+                'status' => OrderStatus::Accepted,
                 'updated_at' => now(),
             ]);
 
         if (! $taken) {
-            return back()->with('error', "La commande {$order->number} a déjà été prise par un autre livreur.");
+            return back()->with('error', "La commande {$order->reference} a déjà été prise par un autre livreur.");
         }
 
-        return back()->with('success', "Commande {$order->number} acceptée. Direction la boutique !");
+        $order->recordStatus(OrderStatus::Accepted, $request->user());
+
+        return back()->with('success', "Commande {$order->reference} acceptée. Direction la boutique !");
     }
 
     /**
@@ -71,19 +74,18 @@ class DeliveryController extends Controller
      */
     private function present(Order $order, bool $withClient): array
     {
-        $next = Order::NEXT_STATUS[$order->status] ?? null;
-
         return [
             'id' => $order->id,
-            'number' => $order->number,
-            'status' => $order->status,
-            'status_label' => Order::STATUSES[$order->status],
-            'next_status' => $next,
+            'number' => $order->reference,
+            'status' => $order->status->value,
+            'next_status' => Order::NEXT_STATUS[$order->status->value] ?? null,
             'created_at' => $order->created_at->format('d/m à H:i'),
-            'store' => $order->items->first()?->product->store->name,
+            'store' => $order->store->name,
             'neighborhood' => $order->neighborhood->name,
             'address_landmarks' => $order->address_landmarks,
-            'payment_method_label' => Order::PAYMENT_METHODS[$order->payment_method] ?? $order->payment_method,
+            'payment_method_label' => $order->payment_method->label(),
+            'cash_given' => $order->cash_given,
+            'client_note' => $order->client_note,
             'total_price' => $order->total_price,
             'items' => $order->items->map(fn ($item) => [
                 'id' => $item->id,

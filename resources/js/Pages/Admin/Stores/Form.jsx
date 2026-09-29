@@ -1,12 +1,15 @@
 import ConfirmDeleteButton from '@/Components/ConfirmDeleteButton';
 import FormErrors, { focusFirstError } from '@/Components/FormErrors';
-import ImageField from '@/Components/ImageField';
+import OpeningHoursEditor, { validateOpeningHours } from '@/Components/OpeningHoursEditor';
+import OpeningStatusBadge from '@/Components/OpeningStatusBadge';
+import Checkbox from '@/Components/UI/Checkbox';
+import FileUpload from '@/Components/UI/FileUpload';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { formatPrice, imageUrl } from '@/utils/format';
+import DashboardLayout from '@/Layouts/DashboardLayout';
+import { formatFCFA, imageUrl } from '@/utils/format';
 import { Head, Link, useForm } from '@inertiajs/react';
 
 function ProductsSection({ store, products }) {
@@ -42,7 +45,7 @@ function ProductsSection({ store, products }) {
                             </div>
                             <div className="min-w-0 flex-1">
                                 <p className="font-medium text-gray-900">{product.name}</p>
-                                <p className="text-sm text-gray-500">{formatPrice(product.price)}</p>
+                                <p className="text-sm text-gray-500">{formatFCFA(product.price)}</p>
                             </div>
                             <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-4">
                                 <Link
@@ -65,23 +68,35 @@ function ProductsSection({ store, products }) {
     );
 }
 
-export default function Form({ store, products, categories }) {
+export default function Form({ store, products, categories, openingHours }) {
     const isEdit = store !== null;
 
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, setError, clearErrors, reset } = useForm({
         name: store?.name ?? '',
-        category: store?.category ?? '',
-        image: null,
+        category_id: store?.category_id ?? '',
+        cover_image: null,
+        // Interrupteur de fermeture temporaire : false = fermé même pendant les horaires.
+        is_open: store?.is_open ?? true,
+        opening_hours: openingHours,
         // Envoi de fichier : PUT simulé via POST + _method (limite HTML/PHP).
         ...(isEdit ? { _method: 'put' } : {}),
     });
 
     const submit = (e) => {
         e.preventDefault();
+
+        const hoursErrors = validateOpeningHours(data.opening_hours);
+        if (Object.keys(hoursErrors).length > 0) {
+            setError(hoursErrors);
+            focusFirstError(hoursErrors);
+            return;
+        }
+
+        clearErrors();
         post(isEdit ? route('admin.stores.update', store.id) : route('admin.stores.store'), {
             preserveScroll: true,
             forceFormData: true,
-            onSuccess: () => reset('image'),
+            onSuccess: () => reset('cover_image'),
             onError: focusFirstError,
         });
     };
@@ -89,7 +104,7 @@ export default function Form({ store, products, categories }) {
     const title = isEdit ? `Modifier « ${store.name} »` : 'Nouvelle boutique';
 
     return (
-        <AuthenticatedLayout
+        <DashboardLayout
             header={
                 <h2 className="text-xl font-semibold leading-tight text-secondary">{title}</h2>
             }
@@ -123,29 +138,57 @@ export default function Form({ store, products, categories }) {
                     </div>
 
                     <div>
-                        <InputLabel htmlFor="category" value="Catégorie" />
-                        <TextInput
-                            id="category"
-                            list="categories"
-                            value={data.category}
-                            onChange={(e) => setData('category', e.target.value)}
-                            className="mt-1 block w-full"
-                            placeholder="Ex : Restaurant, Pharmacie, Épicerie…"
+                        <InputLabel htmlFor="category_id" value="Catégorie" />
+                        <select
+                            id="category_id"
+                            value={data.category_id}
+                            onChange={(e) => setData('category_id', e.target.value)}
+                            aria-invalid={!!errors.category_id}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
                             required
-                        />
-                        <datalist id="categories">
+                        >
+                            <option value="">Choisissez une catégorie</option>
                             {categories.map((category) => (
-                                <option key={category} value={category} />
+                                <option key={category.id} value={category.id}>
+                                    {category.name}
+                                </option>
                             ))}
-                        </datalist>
-                        <InputError message={errors.category} className="mt-1" />
+                        </select>
+                        <InputError message={errors.category_id} className="mt-1" />
                     </div>
 
-                    <ImageField
-                        current={store?.image}
-                        file={data.image}
-                        onChange={(file) => setData('image', file)}
-                        error={errors.image}
+                    <FileUpload
+                        id="cover_image"
+                        label="Photo de couverture"
+                        hint="Facultatif. JPG, PNG ou WebP."
+                        current={store?.cover_image}
+                        value={data.cover_image}
+                        onChange={(file) => setData('cover_image', file)}
+                        error={errors.cover_image}
+                    />
+
+                    <div className="rounded-2xl border border-gray-200 p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-medium text-gray-800">État actuel</p>
+                            {isEdit && (
+                                <OpeningStatusBadge isOpen={store.is_open_now} detail={store.status_detail} />
+                            )}
+                        </div>
+                        <Checkbox
+                            id="is_open"
+                            className="mt-2"
+                            label="Fermeture temporaire"
+                            description="Ferme la boutique tout de suite, même pendant ses horaires (imprévu, rupture de stock…). Les clients ne peuvent plus commander."
+                            checked={!data.is_open}
+                            onChange={(event) => setData('is_open', !event.target.checked)}
+                            error={errors.is_open}
+                        />
+                    </div>
+
+                    <OpeningHoursEditor
+                        value={data.opening_hours}
+                        onChange={(days) => setData('opening_hours', days)}
+                        errors={errors}
                     />
 
                     <div className="flex items-center justify-end gap-4">
@@ -157,6 +200,6 @@ export default function Form({ store, products, categories }) {
 
                 {isEdit && <ProductsSection store={store} products={products} />}
             </div>
-        </AuthenticatedLayout>
+        </DashboardLayout>
     );
 }

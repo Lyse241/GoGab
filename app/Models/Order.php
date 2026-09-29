@@ -2,47 +2,20 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Casts\Attribute;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
-    public const STATUS_PENDING = 'en_attente';
-
-    public const STATUS_ACCEPTED = 'acceptee';
-
-    public const STATUS_DELIVERING = 'en_livraison';
-
-    public const STATUS_DELIVERED = 'livree';
-
     /**
-     * Statuts de commande (valeur enregistrée => libellé affiché).
-     */
-    public const STATUSES = [
-        self::STATUS_PENDING => 'En attente',
-        self::STATUS_ACCEPTED => 'Acceptée',
-        self::STATUS_DELIVERING => 'En cours de livraison',
-        self::STATUS_DELIVERED => 'Livrée',
-    ];
-
-    /**
-     * Progression du livreur : statut actuel => statut suivant.
+     * Progression du livreur (flux v1 simplifié, sans étape commerce) : statut actuel => statut suivant.
      */
     public const NEXT_STATUS = [
-        self::STATUS_ACCEPTED => self::STATUS_DELIVERING,
-        self::STATUS_DELIVERING => self::STATUS_DELIVERED,
-    ];
-
-    /**
-     * Modes de paiement proposés (valeur enregistrée => libellé affiché).
-     * Aucun paiement réel n'est intégré : seul le choix est enregistré.
-     */
-    public const PAYMENT_METHODS = [
-        'airtel_money' => 'Airtel Money',
-        'moov_money' => 'Moov Money',
-        'cash_on_delivery' => 'Paiement à la livraison',
+        OrderStatus::Accepted->value => OrderStatus::Delivering->value,
+        OrderStatus::Delivering->value => OrderStatus::Delivered->value,
     ];
 
     /**
@@ -51,12 +24,19 @@ class Order extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'reference',
+        'store_id',
         'client_id',
         'delivery_id',
         'neighborhood_id',
-        'total_price',
         'address_landmarks',
+        'subtotal',
+        'delivery_fee',
+        'total_price',
         'payment_method',
+        'cash_given',
+        'client_note',
+        'cancel_reason',
         'status',
     ];
 
@@ -68,16 +48,43 @@ class Order extends Model
     protected function casts(): array
     {
         return [
+            'subtotal' => 'decimal:2',
+            'delivery_fee' => 'decimal:2',
             'total_price' => 'decimal:2',
+            'cash_given' => 'decimal:2',
+            'payment_method' => PaymentMethod::class,
+            'status' => OrderStatus::class,
         ];
     }
 
     /**
-     * Numéro lisible de la commande, ex. "GOG-00042".
+     * Référence lisible attribuée dès l'insertion, ex. "GG-000123".
      */
-    protected function number(): Attribute
+    protected static function booted(): void
     {
-        return Attribute::get(fn () => 'GOG-'.str_pad((string) $this->id, 5, '0', STR_PAD_LEFT));
+        static::created(function (Order $order) {
+            if ($order->reference === null) {
+                $order->reference = 'GG-'.str_pad((string) $order->id, 6, '0', STR_PAD_LEFT);
+                $order->saveQuietly();
+            }
+        });
+    }
+
+    /**
+     * Ajoute une entrée à l'historique des statuts.
+     */
+    public function recordStatus(OrderStatus $status, ?User $changedBy = null, ?string $note = null): OrderStatusHistory
+    {
+        return $this->statusHistories()->create([
+            'status' => $status,
+            'changed_by' => $changedBy?->id,
+            'note' => $note,
+        ]);
+    }
+
+    public function store(): BelongsTo
+    {
+        return $this->belongsTo(Store::class);
     }
 
     public function client(): BelongsTo
@@ -98,5 +105,10 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function statusHistories(): HasMany
+    {
+        return $this->hasMany(OrderStatusHistory::class)->oldest('created_at')->oldest('id');
     }
 }

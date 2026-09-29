@@ -15,12 +15,16 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
+            // Compte bloqué : renvoyé vers « compte suspendu » à chaque requête.
+            \App\Http\Middleware\RedirectIfBlocked::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
+        // role:admin,business → rôle requis ; approved → compte validé par l'admin.
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureRole::class,
+            'approved' => \App\Http\Middleware\EnsureApproved::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

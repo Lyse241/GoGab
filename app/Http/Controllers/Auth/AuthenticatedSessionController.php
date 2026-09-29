@@ -33,7 +33,9 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        // Espace du rôle (client → accueil, livreur → /delivery, entreprise → /business, admin → /admin),
+        // ou page d'état du compte s'il n'est pas validé. Une page protégée demandée avant la connexion reste prioritaire.
+        return redirect()->intended(route($request->user()->homeRoute(), absolute: false));
     }
 
     /**

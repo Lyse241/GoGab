@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\AccountStatus;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -29,6 +30,8 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'account_status' => AccountStatus::Approved,
+            'approved_at' => now(),
         ];
     }
 
@@ -39,6 +42,44 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Compte validé (état par défaut, explicite pour la lisibilité des tests).
+     */
+    public function approved(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'account_status' => AccountStatus::Approved,
+            'approved_at' => now(),
+        ]);
+    }
+
+    /**
+     * Compte en attente de validation admin.
+     */
+    public function pending(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'account_status' => AccountStatus::Pending,
+            'approved_at' => null,
+        ]);
+    }
+
+    public function rejected(string $reason = 'Documents illisibles.'): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'account_status' => AccountStatus::Rejected,
+            'rejection_reason' => $reason,
+            'approved_at' => null,
+        ]);
+    }
+
+    public function suspended(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'account_status' => AccountStatus::Suspended,
         ]);
     }
 }

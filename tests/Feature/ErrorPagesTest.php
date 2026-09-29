@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Neighborhood;
 use App\Models\Order;
+use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -38,12 +39,13 @@ class ErrorPagesTest extends TestCase
     {
         // Un livreur tente de modifier une commande assignée à un autre livreur.
         $order = Order::create([
+            'store_id' => Store::factory()->create()->id,
             'client_id' => User::factory()->create(['role' => 'client'])->id,
             'delivery_id' => User::factory()->create(['role' => 'delivery'])->id,
             'neighborhood_id' => Neighborhood::create(['name' => 'Glass'])->id,
             'total_price' => 1000,
             'address_landmarks' => 'Près de la pharmacie',
-            'payment_method' => 'cash_on_delivery',
+            'payment_method' => 'cash',
             'status' => 'acceptee',
         ]);
 
@@ -57,10 +59,10 @@ class ErrorPagesTest extends TestCase
 
     public function test_validation_messages_are_in_french(): void
     {
-        $this->post('/register', [])
+        // Messages génériques (lang/fr/validation.php) ; l'inscription a ses propres messages (RegistrationTest).
+        $this->post('/login', [])
             ->assertSessionHasErrors([
-                'name' => 'Le champ nom est obligatoire.',
-                'phone' => 'Le champ téléphone est obligatoire.',
+                'email' => 'Le champ e-mail est obligatoire.',
                 'password' => 'Le champ mot de passe est obligatoire.',
             ]);
     }

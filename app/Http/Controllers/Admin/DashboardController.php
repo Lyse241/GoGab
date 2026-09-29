@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -17,7 +19,7 @@ class DashboardController extends Controller
     public function __invoke(Request $request): Response
     {
         $status = $request->validate([
-            'status' => ['nullable', Rule::in(array_keys(Order::STATUSES))],
+            'status' => ['nullable', Rule::enum(OrderStatus::class)],
         ])['status'] ?? null;
 
         $countsByStatus = Order::query()
@@ -26,35 +28,35 @@ class DashboardController extends Controller
             ->pluck('total', 'status');
 
         $orders = Order::query()
-            ->with(['client:id,name', 'delivery:id,name', 'neighborhood:id,name', 'items.product.store:id,name'])
+            ->with(['store:id,name', 'client:id,name', 'delivery:id,name', 'neighborhood:id,name'])
             ->when($status, fn ($query) => $query->where('status', $status))
             ->latest()
             ->paginate(15)
             ->withQueryString()
             ->through(fn (Order $order) => [
                 'id' => $order->id,
-                'number' => $order->number,
+                'number' => $order->reference,
                 'created_at' => $order->created_at->format('d/m/Y H:i'),
                 'client' => $order->client->name,
                 'delivery' => $order->delivery?->name,
-                'store' => $order->items->first()?->product->store->name,
+                'store' => $order->store->name,
                 'neighborhood' => $order->neighborhood->name,
                 'total_price' => $order->total_price,
-                'status' => $order->status,
-                'status_label' => Order::STATUSES[$order->status],
+                'status' => $order->status->value,
             ]);
 
         return Inertia::render('Admin/Dashboard', [
             'stats' => [
+                'pending_accounts' => User::awaitingValidation()->count(),
                 'total_orders' => Order::count(),
                 'revenue' => (float) Order::sum('total_price'),
-                'delivered_revenue' => (float) Order::where('status', Order::STATUS_DELIVERED)->sum('total_price'),
+                'delivered_revenue' => (float) Order::where('status', OrderStatus::Delivered)->sum('total_price'),
                 // Tous les statuts, même à zéro, dans l'ordre du cycle de vie.
-                'by_status' => collect(Order::STATUSES)->map(fn ($label, $value) => [
-                    'value' => $value,
-                    'label' => $label,
-                    'count' => (int) ($countsByStatus[$value] ?? 0),
-                ])->values(),
+                'by_status' => collect(OrderStatus::cases())->map(fn (OrderStatus $status) => [
+                    'value' => $status->value,
+                    'label' => $status->label(),
+                    'count' => (int) ($countsByStatus[$status->value] ?? 0),
+                ]),
             ],
             'orders' => $orders,
             'filters' => ['status' => $status],

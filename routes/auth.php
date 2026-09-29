@@ -12,10 +12,29 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
+    // Inscription : choix du profil, puis un formulaire par profil.
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
-
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    Route::get('register/client', [RegisteredUserController::class, 'createClient'])
+        ->name('register.client');
+    Route::post('register/client', [RegisteredUserController::class, 'storeClient'])
+        ->name('register.client.store');
+    Route::get('register/delivery', [RegisteredUserController::class, 'createDelivery'])
+        ->name('register.delivery');
+    Route::post('register/delivery/check', [RegisteredUserController::class, 'checkDelivery'])
+        ->middleware('throttle:30,1')
+        ->name('register.delivery.check');
+    Route::post('register/delivery', [RegisteredUserController::class, 'storeDelivery'])
+        ->middleware('throttle:10,1')
+        ->name('register.delivery.store');
+    Route::get('register/business', [RegisteredUserController::class, 'createBusiness'])
+        ->name('register.business');
+    Route::post('register/business/check', [RegisteredUserController::class, 'checkBusiness'])
+        ->middleware('throttle:30,1')
+        ->name('register.business.check');
+    Route::post('register/business', [RegisteredUserController::class, 'storeBusiness'])
+        ->middleware('throttle:10,1')
+        ->name('register.business.store');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');

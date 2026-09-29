@@ -1,10 +1,29 @@
 import FormErrors, { focusFirstError } from '@/Components/FormErrors';
 import InputError from '@/Components/InputError';
-import Spinner from '@/Components/Spinner';
+import Spinner from '@/Components/UI/Spinner';
 import { useCart } from '@/Contexts/CartContext';
+import { useNeighborhood } from '@/Contexts/NeighborhoodContext';
+import useStoreStatus from '@/Hooks/useStoreStatus';
 import PublicLayout from '@/Layouts/PublicLayout';
-import { formatPrice } from '@/utils/format';
+import { formatFCFA } from '@/utils/format';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Clock } from 'lucide-react';
+
+function StoreClosedAlert({ status, storeName }) {
+    return (
+        <div role="alert" className="flex items-start gap-3 rounded-2xl border border-accent-300 bg-accent-50 p-4">
+            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-accent-700" aria-hidden="true" />
+            <div className="text-sm">
+                <p className="font-semibold text-secondary-900">
+                    {storeName} · {status.status_label}
+                </p>
+                <p className="mt-0.5 text-gray-700">
+                    Votre panier est conservé : vous pourrez commander dès la réouverture.
+                </p>
+            </div>
+        </div>
+    );
+}
 
 const LANDMARKS_MAX = 500;
 
@@ -63,7 +82,7 @@ function OrderSummary({ cart }) {
                             {item.name}
                         </span>
                         <span className="shrink-0 text-gray-900">
-                            {formatPrice(item.price * item.quantity)}
+                            {formatFCFA(item.price * item.quantity)}
                         </span>
                     </li>
                 ))}
@@ -71,7 +90,7 @@ function OrderSummary({ cart }) {
             <div className="mt-2 flex items-center justify-between border-t border-gray-200 pt-3">
                 <span className="font-medium text-gray-700">Total</span>
                 <span className="text-lg font-bold text-gray-900">
-                    {formatPrice(cart.total)}
+                    {formatFCFA(cart.total)}
                 </span>
             </div>
             <Link
@@ -87,8 +106,14 @@ function OrderSummary({ cart }) {
 export default function Index({ neighborhoods, paymentMethods }) {
     const cart = useCart();
     const { user } = usePage().props.auth;
+    // Le serveur refusera de toute façon une commande pour un commerce fermé.
+    const { status } = useStoreStatus(cart.store?.id);
+    const closed = status !== null && !status.is_open_now;
+    // Quartier choisi dans le header, s'il est bien desservi.
+    const { neighborhoodId } = useNeighborhood();
+    const preselected = neighborhoods.some((n) => n.id === neighborhoodId) ? String(neighborhoodId) : '';
     const { data, setData, errors, setError, clearErrors, processing, post, transform } = useForm({
-        neighborhood_id: '',
+        neighborhood_id: preselected,
         address_landmarks: '',
         payment_method: '',
     });
@@ -134,7 +159,7 @@ export default function Index({ neighborhoods, paymentMethods }) {
 
     if (cart.items.length === 0) {
         return (
-            <PublicLayout>
+            <PublicLayout search={false}>
                 <Head title="Commande" />
                 <div className="mx-auto mt-16 max-w-md text-center">
                     <h1 className="text-xl font-bold text-gray-900">
@@ -155,7 +180,7 @@ export default function Index({ neighborhoods, paymentMethods }) {
     }
 
     return (
-        <PublicLayout>
+        <PublicLayout search={false}>
             <Head title="Commande" />
 
             <h1 className="mt-6 text-2xl font-bold text-secondary">
@@ -280,9 +305,11 @@ export default function Index({ neighborhoods, paymentMethods }) {
 
                     <FormErrors errors={cartError ? {} : errors} />
 
+                    {closed && !cartError && <StoreClosedAlert status={status} storeName={cart.store.name} />}
+
                     <button
                         type="submit"
-                        disabled={processing}
+                        disabled={processing || closed}
                         aria-busy={processing}
                         className="w-full rounded-full bg-primary-600 py-3 font-semibold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50"
                     >
@@ -291,7 +318,7 @@ export default function Index({ neighborhoods, paymentMethods }) {
                                 <Spinner /> Envoi de la commande…
                             </span>
                         ) : (
-                            `Confirmer la commande · ${formatPrice(cart.total)}`
+                            `Confirmer la commande · ${formatFCFA(cart.total)}`
                         )}
                     </button>
                 </div>

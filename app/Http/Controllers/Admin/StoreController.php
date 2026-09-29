@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\SaveStoreRequest;
+use App\Models\Category;
 use App\Models\OrderItem;
 use App\Models\Store;
+use App\Services\StoreHours;
 use App\Support\ImageStorage;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -17,10 +19,18 @@ class StoreController extends Controller
     public function index(): Response
     {
         return Inertia::render('Admin/Stores/Index', [
-            'stores' => Store::withCount('products')
-                ->orderBy('category')
+            'stores' => Store::with(['category:id,name', 'openingHours'])
+                ->withCount('products')
                 ->orderBy('name')
-                ->get(['id', 'name', 'category', 'image']),
+                ->get(['id', 'name', 'category_id', 'cover_image', 'is_open', 'is_active'])
+                ->map(fn (Store $store) => [
+                    'id' => $store->id,
+                    'name' => $store->name,
+                    'category' => $store->category->name,
+                    'cover_image' => $store->cover_image,
+                    'products_count' => $store->products_count,
+                    ...$store->openingStatus(),
+                ]),
         ]);
     }
 
@@ -30,17 +40,29 @@ class StoreController extends Controller
             'store' => null,
             'products' => [],
             'categories' => $this->categories(),
+            // Proposition par défaut, modifiable dans le formulaire.
+            'openingHours' => StoreHours::everyDay('08:00', '22:00'),
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(SaveStoreRequest $request): RedirectResponse
     {
-        $data = $this->validated($request);
-        $data['image'] = $request->hasFile('image')
-            ? ImageStorage::store($request->file('image'), 'stores')
+        $data = $request->safe()->except(['opening_hours', 'cover_image']);
+        $data['cover_image'] = $request->hasFile('cover_image')
+            ? ImageStorage::store($request->file('cover_image'), 'stores')
             : null;
+        // Boutique créée par l'admin (sans compte entreprise) : visible immédiatement.
+        $data['is_active'] = true;
 
-        $store = Store::create($data);
+        $store = DB::transaction(function () use ($request, $data) {
+            $store = Store::create($data);
+
+            if ($request->has('opening_hours')) {
+                StoreHours::sync($store, $request->validated('opening_hours'));
+            }
+
+            return $store;
+        });
 
         return redirect()
             ->route('admin.stores.edit', $store)
@@ -52,8 +74,11 @@ class StoreController extends Controller
      */
     public function edit(Store $store): Response
     {
+        $store->load('openingHours');
+
         return Inertia::render('Admin/Stores/Form', [
-            'store' => $store->only(['id', 'name', 'category', 'image']),
+            'store' => $store->only(['id', 'name', 'category_id', 'cover_image', 'is_open']) + $store->openingStatus(),
+            'openingHours' => StoreHours::schedule($store),
             'products' => $store->products()
                 ->orderBy('name')
                 ->get(['id', 'name', 'description', 'price', 'image']),
@@ -61,12 +86,18 @@ class StoreController extends Controller
         ]);
     }
 
-    public function update(Request $request, Store $store): RedirectResponse
+    public function update(SaveStoreRequest $request, Store $store): RedirectResponse
     {
-        $data = $this->validated($request);
-        $data['image'] = ImageStorage::replace($request->file('image'), $store->image, 'stores');
+        $data = $request->safe()->except(['opening_hours', 'cover_image']);
+        $data['cover_image'] = ImageStorage::replace($request->file('cover_image'), $store->cover_image, 'stores');
 
-        $store->update($data);
+        DB::transaction(function () use ($request, $store, $data) {
+            $store->update($data);
+
+            if ($request->has('opening_hours')) {
+                StoreHours::sync($store, $request->validated('opening_hours'));
+            }
+        });
 
         return back()->with('success', "Boutique « {$store->name} » mise à jour.");
     }
@@ -75,13 +106,14 @@ class StoreController extends Controller
     {
         // Les commandes gardent une référence vers les produits : on refuse plutôt
         // que de casser l'historique des commandes.
-        $hasOrders = OrderItem::whereIn('product_id', $store->products()->select('id'))->exists();
+        $hasOrders = $store->orders()->exists()
+            || OrderItem::whereIn('product_id', $store->products()->select('id'))->exists();
 
         if ($hasOrders) {
             return back()->with('error', "Impossible de supprimer « {$store->name} » : certains de ses produits figurent dans des commandes.");
         }
 
-        $images = $store->products()->pluck('image')->push($store->image);
+        $images = $store->products()->pluck('image')->push($store->cover_image, $store->logo);
 
         DB::transaction(fn () => $store->delete()); // produits supprimés en cascade
 
@@ -93,24 +125,10 @@ class StoreController extends Controller
     }
 
     /**
-     * @return array<string, mixed>
-     */
-    private function validated(Request $request): array
-    {
-        return $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'category' => ['required', 'string', 'max:100'],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-        ], [
-            'image.max' => "L'image ne doit pas dépasser 2 Mo.",
-        ]);
-    }
-
-    /**
-     * Catégories existantes, proposées en suggestion dans le formulaire.
+     * Catégories proposées dans le formulaire.
      */
     private function categories(): array
     {
-        return Store::distinct()->orderBy('category')->pluck('category')->all();
+        return Category::orderBy('sort_order')->orderBy('name')->get(['id', 'name'])->all();
     }
 }

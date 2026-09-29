@@ -1,12 +1,7 @@
-export default function Checkbox({ className = '', ...props }) {
-    return (
-        <input
-            {...props}
-            type="checkbox"
-            className={
-                'rounded border-gray-300 text-primary-600 shadow-sm focus:ring-primary ' +
-                className
-            }
-        />
-    );
-}
+/**
+ * Ancien composant Breeze conservé pour les pages d’authentification et de profil :
+ * il délègue au design system. Préférer @/Components/UI/Checkbox pour tout nouveau code.
+ */
+import Checkbox from '@/Components/UI/Checkbox';
+
+export default Checkbox;

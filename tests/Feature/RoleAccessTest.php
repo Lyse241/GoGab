@@ -28,17 +28,17 @@ class RoleAccessTest extends TestCase
     public function test_each_role_can_open_its_own_dashboard(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'admin']))
-            ->get('/admin/dashboard')->assertOk();
+            ->get('/admin')->assertOk();
 
         $this->actingAs(User::factory()->create(['role' => 'delivery']))
-            ->get('/delivery/dashboard')->assertOk();
+            ->get('/delivery')->assertOk();
     }
 
     public function test_client_is_blocked_from_admin_and_delivery_spaces(): void
     {
         $client = User::factory()->create(['role' => 'client']);
 
-        foreach (['/admin/dashboard', '/delivery/dashboard'] as $url) {
+        foreach (['/admin', '/delivery'] as $url) {
             $this->actingAs($client)->get($url)
                 ->assertRedirect(route('home', absolute: false))
                 ->assertSessionHas('error');
@@ -49,21 +49,21 @@ class RoleAccessTest extends TestCase
     {
         $delivery = User::factory()->create(['role' => 'delivery']);
 
-        $this->actingAs($delivery)->get('/admin/dashboard')
+        $this->actingAs($delivery)->get('/admin')
             ->assertRedirect(route('delivery.dashboard', absolute: false))
             ->assertSessionHas('error');
     }
 
     public function test_guests_are_sent_to_login(): void
     {
-        $this->get('/admin/dashboard')->assertRedirect(route('login', absolute: false));
-        $this->get('/delivery/dashboard')->assertRedirect(route('login', absolute: false));
+        $this->get('/admin')->assertRedirect(route('login', absolute: false));
+        $this->get('/delivery')->assertRedirect(route('login', absolute: false));
     }
 
     public function test_role_is_shared_with_inertia(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'delivery']))
-            ->get('/delivery/dashboard')
+            ->get('/delivery')
             ->assertInertia(fn ($page) => $page
                 ->component('Delivery/Dashboard')
                 ->where('auth.role', 'delivery'));

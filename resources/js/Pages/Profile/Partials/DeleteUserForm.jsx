@@ -1,9 +1,6 @@
-import DangerButton from '@/Components/DangerButton';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import Modal from '@/Components/Modal';
-import SecondaryButton from '@/Components/SecondaryButton';
-import TextInput from '@/Components/TextInput';
+import Button from '@/Components/UI/Button';
+import Input from '@/Components/UI/Input';
+import Modal from '@/Components/UI/Modal';
 import { useForm } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 
@@ -57,56 +54,40 @@ export default function DeleteUserForm({ className = '' }) {
                 </p>
             </header>
 
-            <DangerButton onClick={confirmUserDeletion}>
+            <Button variant="danger" onClick={confirmUserDeletion}>
                 Supprimer mon compte
-            </DangerButton>
+            </Button>
 
-            <Modal show={confirmingUserDeletion} onClose={closeModal}>
-                <form onSubmit={deleteUser} className="p-6">
-                    <h2 className="text-lg font-medium text-gray-900">
-                        Voulez-vous vraiment supprimer votre compte ?
-                    </h2>
-
-                    <p className="mt-1 text-sm text-gray-600">
-                        Toutes vos données seront définitivement effacées. Saisissez votre mot de passe pour confirmer la suppression de votre compte.
-                    </p>
-
-                    <div className="mt-6">
-                        <InputLabel
-                            htmlFor="password"
-                            value="Mot de passe"
-                            className="sr-only"
-                        />
-
-                        <TextInput
-                            id="password"
-                            type="password"
-                            name="password"
-                            ref={passwordInput}
-                            value={data.password}
-                            onChange={(e) =>
-                                setData('password', e.target.value)
-                            }
-                            className="mt-1 block w-3/4"
-                            isFocused
-                            placeholder="Mot de passe"
-                        />
-
-                        <InputError
-                            message={errors.password}
-                            className="mt-2"
-                        />
-                    </div>
-
-                    <div className="mt-6 flex justify-end">
-                        <SecondaryButton onClick={closeModal}>
+            <Modal
+                open={confirmingUserDeletion}
+                onClose={closeModal}
+                closeable={!processing}
+                title="Voulez-vous vraiment supprimer votre compte ?"
+                description="Toutes vos données seront définitivement effacées. Saisissez votre mot de passe pour confirmer."
+                footer={
+                    <>
+                        <Button variant="outline" onClick={closeModal} disabled={processing}>
                             Annuler
-                        </SecondaryButton>
-
-                        <DangerButton className="ms-3" disabled={processing}>
+                        </Button>
+                        <Button type="submit" form="delete-user-form" variant="danger" loading={processing}>
                             Supprimer mon compte
-                        </DangerButton>
-                    </div>
+                        </Button>
+                    </>
+                }
+            >
+                <form id="delete-user-form" onSubmit={deleteUser}>
+                    <Input
+                        id="password"
+                        type="password"
+                        name="password"
+                        label="Mot de passe"
+                        ref={passwordInput}
+                        value={data.password}
+                        onChange={(e) => setData('password', e.target.value)}
+                        error={errors.password}
+                        autoComplete="current-password"
+                        isFocused
+                    />
                 </form>
             </Modal>
         </section>

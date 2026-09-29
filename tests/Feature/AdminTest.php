@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Category;
 use App\Models\Neighborhood;
 use App\Models\Order;
 use App\Models\Product;
@@ -29,12 +30,14 @@ class AdminTest extends TestCase
 
     private function makeOrder(string $status, float $total, ?Product $product = null): Order
     {
-        $product ??= Store::firstOrCreate(['name' => 'Chez Test'], ['category' => 'Restaurant'])
+        $product ??= (Store::firstWhere('name', 'Chez Test') ?? Store::factory()->inCategory('Restaurant')->create(['name' => 'Chez Test']))
             ->products()->firstOrCreate(['name' => 'Poulet'], ['price' => 1000]);
 
         $order = Order::create([
+            'store_id' => $product->store_id,
             'client_id' => User::factory()->create(['role' => 'client'])->id,
             'neighborhood_id' => Neighborhood::firstOrCreate(['name' => 'Glass'])->id,
+            'subtotal' => $total,
             'total_price' => $total,
             'address_landmarks' => 'Près de la pharmacie',
             'payment_method' => 'moov_money',
@@ -54,19 +57,18 @@ class AdminTest extends TestCase
         $this->makeOrder('livree', 5000);
 
         $this->actingAs($this->admin)
-            ->get('/admin/dashboard')
+            ->get('/admin')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Dashboard')
                 ->where('stats.total_orders', 3)
                 ->where('stats.revenue', 8000)
                 ->where('stats.delivered_revenue', 5000)
-                ->where('stats.by_status', [
-                    ['value' => 'en_attente', 'label' => 'En attente', 'count' => 2],
-                    ['value' => 'acceptee', 'label' => 'Acceptée', 'count' => 0],
-                    ['value' => 'en_livraison', 'label' => 'En cours de livraison', 'count' => 0],
-                    ['value' => 'livree', 'label' => 'Livrée', 'count' => 1],
-                ])
+                // Les 10 statuts, même à zéro, dans l'ordre du cycle de vie.
+                ->has('stats.by_status', 10)
+                ->where('stats.by_status.0', ['value' => 'en_attente', 'label' => 'En attente', 'count' => 2])
+                ->where('stats.by_status.1', ['value' => 'acceptee', 'label' => 'Acceptée', 'count' => 0])
+                ->where('stats.by_status.8', ['value' => 'livree', 'label' => 'Livrée', 'count' => 1])
                 ->has('orders.data', 3)
                 ->where('orders.data.0.store', 'Chez Test'));
     }
@@ -77,7 +79,7 @@ class AdminTest extends TestCase
         $delivered = $this->makeOrder('livree', 5000);
 
         $this->actingAs($this->admin)
-            ->get('/admin/dashboard?status=livree')
+            ->get('/admin?status=livree')
             ->assertInertia(fn (Assert $page) => $page
                 ->where('filters.status', 'livree')
                 ->has('orders.data', 1)
@@ -85,18 +87,18 @@ class AdminTest extends TestCase
                 ->where('stats.total_orders', 2)); // les stats restent globales
 
         $this->actingAs($this->admin)
-            ->get('/admin/dashboard?status=inconnu')
+            ->get('/admin?status=inconnu')
             ->assertSessionHasErrors('status');
     }
 
     public function test_non_admins_cannot_access_admin_pages(): void
     {
-        $store = Store::create(['name' => 'Chez Test', 'category' => 'Restaurant']);
+        $store = Store::factory()->inCategory('Restaurant')->create(['name' => 'Chez Test']);
 
         foreach (['client', 'delivery'] as $role) {
             $user = User::factory()->create(['role' => $role]);
 
-            $this->actingAs($user)->get('/admin/dashboard')->assertSessionHas('error');
+            $this->actingAs($user)->get('/admin')->assertSessionHas('error');
             $this->actingAs($user)->get('/admin/stores')->assertSessionHas('error');
             $this->actingAs($user)->delete("/admin/stores/{$store->id}")->assertSessionHas('error');
         }
@@ -111,15 +113,17 @@ class AdminTest extends TestCase
         $this->actingAs($this->admin)
             ->post('/admin/stores', [
                 'name' => 'Pharmacie Nouvelle',
-                'category' => 'Pharmacie',
-                'image' => UploadedFile::fake()->image('vitrine.jpg'),
+                'category_id' => Category::factory()->create(['name' => 'Pharmacie'])->id,
+                'cover_image' => UploadedFile::fake()->image('vitrine.jpg'),
             ])
             ->assertSessionHas('success');
 
         $store = Store::sole();
         $this->assertSame('Pharmacie Nouvelle', $store->name);
-        $this->assertStringStartsWith('stores/', $store->image);
-        Storage::disk('public')->assertExists($store->image);
+        $this->assertSame('Pharmacie', $store->category->name);
+        $this->assertTrue($store->is_active);
+        $this->assertStringStartsWith('stores/', $store->cover_image);
+        Storage::disk('public')->assertExists($store->cover_image);
     }
 
     public function test_store_validation(): void
@@ -127,10 +131,10 @@ class AdminTest extends TestCase
         $this->actingAs($this->admin)
             ->post('/admin/stores', [
                 'name' => '',
-                'category' => '',
-                'image' => UploadedFile::fake()->create('document.pdf', 100, 'application/pdf'),
+                'category_id' => 999,
+                'cover_image' => $this->fakePdf('document.pdf', 100),
             ])
-            ->assertSessionHasErrors(['name', 'category', 'image']);
+            ->assertSessionHasErrors(['name', 'category_id', 'cover_image']);
 
         $this->assertDatabaseCount('stores', 0);
     }
@@ -138,35 +142,35 @@ class AdminTest extends TestCase
     public function test_admin_can_update_a_store_and_replace_its_image(): void
     {
         $oldImage = UploadedFile::fake()->image('old.jpg')->store('stores', 'public');
-        $store = Store::create(['name' => 'Ancien nom', 'category' => 'Restaurant', 'image' => $oldImage]);
+        $store = Store::factory()->inCategory('Restaurant')->create(['name' => 'Ancien nom', 'cover_image' => $oldImage]);
 
         $this->actingAs($this->admin)
             ->put("/admin/stores/{$store->id}", [
                 'name' => 'Nouveau nom',
-                'category' => 'Restaurant',
-                'image' => UploadedFile::fake()->image('new.jpg'),
+                'category_id' => $store->category_id,
+                'cover_image' => UploadedFile::fake()->image('new.jpg'),
             ])
             ->assertSessionHas('success');
 
         $store->refresh();
         $this->assertSame('Nouveau nom', $store->name);
         Storage::disk('public')->assertMissing($oldImage);
-        Storage::disk('public')->assertExists($store->image);
+        Storage::disk('public')->assertExists($store->cover_image);
     }
 
     public function test_updating_without_image_keeps_the_current_one(): void
     {
-        $store = Store::create(['name' => 'Chez Test', 'category' => 'Restaurant', 'image' => 'https://picsum.photos/seed/x/600/400']);
+        $store = Store::factory()->inCategory('Restaurant')->create(['name' => 'Chez Test', 'cover_image' => 'https://picsum.photos/seed/x/600/400']);
 
         $this->actingAs($this->admin)
-            ->put("/admin/stores/{$store->id}", ['name' => 'Chez Test', 'category' => 'Resto']);
+            ->put("/admin/stores/{$store->id}", ['name' => 'Chez Test', 'category_id' => $store->category_id]);
 
-        $this->assertSame('https://picsum.photos/seed/x/600/400', $store->fresh()->image);
+        $this->assertSame('https://picsum.photos/seed/x/600/400', $store->fresh()->cover_image);
     }
 
     public function test_admin_can_delete_a_store_without_orders(): void
     {
-        $store = Store::create(['name' => 'Chez Test', 'category' => 'Restaurant']);
+        $store = Store::factory()->inCategory('Restaurant')->create(['name' => 'Chez Test']);
         $store->products()->create(['name' => 'Poulet', 'price' => 1000]);
 
         $this->actingAs($this->admin)
@@ -194,7 +198,7 @@ class AdminTest extends TestCase
 
     public function test_admin_can_add_update_and_delete_a_product(): void
     {
-        $store = Store::create(['name' => 'Chez Test', 'category' => 'Restaurant']);
+        $store = Store::factory()->inCategory('Restaurant')->create(['name' => 'Chez Test']);
 
         $this->actingAs($this->admin)
             ->post("/admin/stores/{$store->id}/products", [
@@ -222,7 +226,7 @@ class AdminTest extends TestCase
 
     public function test_product_validation(): void
     {
-        $store = Store::create(['name' => 'Chez Test', 'category' => 'Restaurant']);
+        $store = Store::factory()->inCategory('Restaurant')->create(['name' => 'Chez Test']);
 
         $this->actingAs($this->admin)
             ->post("/admin/stores/{$store->id}/products", ['name' => '', 'price' => 0])

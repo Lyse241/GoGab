@@ -39,7 +39,7 @@ class CartPagesTest extends TestCase
                 ->where('paymentMethods', [
                     ['value' => 'airtel_money', 'label' => 'Airtel Money'],
                     ['value' => 'moov_money', 'label' => 'Moov Money'],
-                    ['value' => 'cash_on_delivery', 'label' => 'Paiement à la livraison'],
+                    ['value' => 'cash', 'label' => 'Espèces à la livraison'],
                 ]));
     }
 

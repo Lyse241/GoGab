@@ -1,18 +1,13 @@
-export default function InputLabel({
-    value,
-    className = '',
-    children,
-    ...props
-}) {
+/**
+ * Ancien composant Breeze conservé pour les pages d’authentification et de profil :
+ * il délègue au design system. Préférer le prop `label` des champs UI pour tout nouveau code.
+ */
+import { Label } from '@/Components/UI/Field';
+
+export default function InputLabel({ value, className, children, ...props }) {
     return (
-        <label
-            {...props}
-            className={
-                `block text-sm font-medium text-gray-700 ` +
-                className
-            }
-        >
-            {value ? value : children}
-        </label>
+        <Label className={className} {...props}>
+            {value ?? children}
+        </Label>
     );
 }

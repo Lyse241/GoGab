@@ -1,10 +1,10 @@
 import FormErrors, { focusFirstError } from '@/Components/FormErrors';
-import ImageField from '@/Components/ImageField';
+import FileUpload from '@/Components/UI/FileUpload';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import DashboardLayout from '@/Layouts/DashboardLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 
 export default function Form({ store, product }) {
@@ -32,7 +32,7 @@ export default function Form({ store, product }) {
     const title = isEdit ? `Modifier « ${product.name} »` : 'Nouveau produit';
 
     return (
-        <AuthenticatedLayout
+        <DashboardLayout
             header={
                 <h2 className="text-xl font-semibold leading-tight text-secondary">
                     {title}
@@ -102,9 +102,12 @@ export default function Form({ store, product }) {
                         )}
                     </div>
 
-                    <ImageField
+                    <FileUpload
+                        id="image"
+                        label="Photo du produit"
+                        hint="Facultatif. JPG, PNG ou WebP."
                         current={product?.image}
-                        file={data.image}
+                        value={data.image}
                         onChange={(file) => setData('image', file)}
                         error={errors.image}
                     />
@@ -116,6 +119,6 @@ export default function Form({ store, product }) {
                     </div>
                 </form>
             </div>
-        </AuthenticatedLayout>
+        </DashboardLayout>
     );
 }

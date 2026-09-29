@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Models\Neighborhood;
 use App\Models\Order;
 use App\Models\Store;
@@ -26,7 +28,7 @@ class OrderTest extends TestCase
 
         $this->client = User::factory()->create(['role' => 'client']);
         $this->neighborhood = Neighborhood::create(['name' => 'Glass']);
-        $this->store = Store::create(['name' => 'Chez Test', 'category' => 'Restaurant']);
+        $this->store = Store::factory()->inCategory('Restaurant')->create(['name' => 'Chez Test']);
     }
 
     private function payload(array $items): array
@@ -55,11 +57,61 @@ class OrderTest extends TestCase
             ->assertSessionHas('success');
 
         $this->assertSame($this->client->id, $order->client_id);
-        $this->assertSame('en_attente', $order->status);
+        $this->assertSame($this->store->id, $order->store_id);
+        $this->assertSame(OrderStatus::Pending, $order->status);
+        $this->assertSame(PaymentMethod::AirtelMoney, $order->payment_method);
         $this->assertNull($order->delivery_id);
+        $this->assertNull($order->cash_given);
+        $this->assertSame('11500.00', $order->subtotal);
+        $this->assertSame('0.00', $order->delivery_fee);
         $this->assertSame('11500.00', $order->total_price);
+        $this->assertSame('GG-'.str_pad($order->id, 6, '0', STR_PAD_LEFT), $order->reference);
+
+        // Le passage en attente est tracé dans l'historique.
+        $history = $order->statusHistories()->sole();
+        $this->assertSame(OrderStatus::Pending, $history->status);
+        $this->assertSame($this->client->id, $history->changed_by);
         $this->assertDatabaseHas('order_items', ['order_id' => $order->id, 'product_id' => $poulet->id, 'quantity' => 2, 'price' => 4500]);
         $this->assertDatabaseHas('order_items', ['order_id' => $order->id, 'product_id' => $riz->id, 'quantity' => 1, 'price' => 2500]);
+    }
+
+    public function test_cash_order_keeps_the_amount_given_and_note(): void
+    {
+        $product = $this->store->products()->create(['name' => 'Poulet', 'price' => 4500]);
+
+        $this->actingAs($this->client)->post('/orders', [
+            ...$this->payload([['product_id' => $product->id, 'quantity' => 1]]),
+            'payment_method' => 'cash',
+            'cash_given' => 10000,
+            'client_note' => 'Sans piment, svp',
+        ])->assertSessionHasNoErrors();
+
+        $order = Order::sole();
+        $this->assertSame(PaymentMethod::Cash, $order->payment_method);
+        $this->assertSame('10000.00', $order->cash_given);
+        $this->assertSame('Sans piment, svp', $order->client_note);
+    }
+
+    public function test_cash_given_is_refused_for_mobile_money(): void
+    {
+        $product = $this->store->products()->create(['name' => 'Poulet', 'price' => 4500]);
+
+        $this->actingAs($this->client)
+            ->post('/orders', [...$this->payload([['product_id' => $product->id, 'quantity' => 1]]), 'cash_given' => 10000])
+            ->assertSessionHasErrors('cash_given');
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_unavailable_product_is_rejected(): void
+    {
+        $product = $this->store->products()->create(['name' => 'Poulet', 'price' => 4500, 'is_available' => false]);
+
+        $this->actingAs($this->client)
+            ->post('/orders', $this->payload([['product_id' => $product->id, 'quantity' => 1]]))
+            ->assertSessionHasErrors('items');
+
+        $this->assertDatabaseCount('orders', 0);
     }
 
     public function test_empty_cart_is_rejected(): void
@@ -83,7 +135,7 @@ class OrderTest extends TestCase
     public function test_products_from_two_stores_are_rejected(): void
     {
         $a = $this->store->products()->create(['name' => 'Poulet', 'price' => 4500]);
-        $b = Store::create(['name' => 'Pharmacie', 'category' => 'Pharmacie'])
+        $b = Store::factory()->inCategory('Pharmacie')->create(['name' => 'Pharmacie'])
             ->products()->create(['name' => 'Paracétamol', 'price' => 1000]);
 
         $this->actingAs($this->client)
@@ -138,10 +190,10 @@ class OrderTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Orders/Show')
-                ->where('order.number', 'GOG-'.str_pad($order->id, 5, '0', STR_PAD_LEFT))
+                ->where('order.number', $order->reference)
                 ->where('order.neighborhood', 'Glass')
                 ->where('order.store', 'Chez Test')
-                ->where('order.status_label', 'En attente')
+                ->where('order.status', 'en_attente')
                 ->where('order.payment_method_label', 'Airtel Money')
                 ->has('order.items', 1)
                 ->where('order.items.0.quantity', 2));

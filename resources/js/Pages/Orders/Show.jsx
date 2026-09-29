@@ -1,6 +1,6 @@
-import StatusBadge from '@/Components/StatusBadge';
+import StatusBadge from '@/Components/UI/StatusBadge';
 import PublicLayout from '@/Layouts/PublicLayout';
-import { formatPrice, imageUrl } from '@/utils/format';
+import { formatFCFA, imageUrl } from '@/utils/format';
 import { Head, Link } from '@inertiajs/react';
 
 function Detail({ label, children }) {
@@ -43,8 +43,8 @@ export default function Show({ order }) {
                     </p>
                     <StatusBadge
                         status={order.status}
-                        label={order.status_label}
-                        className="mt-3 px-3 py-1 text-sm"
+                        size="lg"
+                        className="mt-3"
                     />
                 </div>
 
@@ -79,11 +79,11 @@ export default function Show({ order }) {
                                 <div className="min-w-0 flex-1">
                                     <p className="font-medium text-gray-900">{item.name}</p>
                                     <p className="text-sm text-gray-500">
-                                        {item.quantity} × {formatPrice(item.price)}
+                                        {item.quantity} × {formatFCFA(item.price)}
                                     </p>
                                 </div>
                                 <p className="shrink-0 font-medium text-gray-900">
-                                    {formatPrice(item.price * item.quantity)}
+                                    {formatFCFA(item.price * item.quantity)}
                                 </p>
                             </li>
                         ))}
@@ -91,7 +91,7 @@ export default function Show({ order }) {
                     <div className="flex items-center justify-between border-t border-gray-200 pt-3">
                         <span className="font-medium text-gray-700">Total</span>
                         <span className="text-lg font-bold text-gray-900">
-                            {formatPrice(order.total_price)}
+                            {formatFCFA(order.total_price)}
                         </span>
                     </div>
                 </section>

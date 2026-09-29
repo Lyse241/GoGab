@@ -28,7 +28,7 @@ export function focusFirstError(errors) {
     const first = Object.keys(errors)[0];
 
     if (first) {
-        const field = document.getElementById(first);
+        const field = document.getElementById(first) ?? document.getElementById(first.replaceAll('.', '-'));
         field?.focus();
         field?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }

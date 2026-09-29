@@ -1,8 +1,9 @@
-import Pagination from "@/Components/Pagination";
-import StatusBadge from "@/Components/StatusBadge";
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import { formatPrice } from "@/utils/format";
+import Pagination from '@/Components/UI/Pagination';
+import StatusBadge from '@/Components/UI/StatusBadge';
+import DashboardLayout from '@/Layouts/DashboardLayout';
+import { formatFCFA } from "@/utils/format";
 import { Head, Link } from "@inertiajs/react";
+import { ChevronRight, UserCheck } from "lucide-react";
 
 function StatCard({ label, value, hint }) {
     return (
@@ -11,6 +12,47 @@ function StatCard({ label, value, hint }) {
             <p className="mt-1 text-2xl font-bold text-secondary">{value}</p>
             {hint && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
         </div>
+    );
+}
+
+/**
+ * Carte « À valider » : comptes en attente, lien vers la file de validation.
+ */
+function PendingAccountsCard({ count }) {
+    return (
+        <Link
+            href={route("admin.accounts.index")}
+            className={`group flex items-center gap-4 rounded-xl p-4 shadow-sm ring-1 transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                count > 0
+                    ? "bg-accent-50 ring-accent-300"
+                    : "bg-white ring-gray-200"
+            }`}
+        >
+            <span
+                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
+                    count > 0
+                        ? "bg-accent text-secondary-900"
+                        : "bg-gray-100 text-gray-500"
+                }`}
+            >
+                <UserCheck className="h-6 w-6" aria-hidden="true" />
+            </span>
+            <span className="min-w-0 flex-1">
+                <span className="block text-sm text-gray-600">À valider</span>
+                <span className="block text-2xl font-bold text-secondary">
+                    {count}
+                </span>
+                <span className="block text-xs text-gray-500">
+                    {count > 0
+                        ? `compte${count > 1 ? "s" : ""} en attente de validation`
+                        : "Aucun compte en attente"}
+                </span>
+            </span>
+            <ChevronRight
+                className="h-5 w-5 text-gray-400 transition group-hover:translate-x-0.5"
+                aria-hidden="true"
+            />
+        </Link>
     );
 }
 
@@ -33,7 +75,7 @@ function FilterLink({ status, active, children }) {
 
 export default function Dashboard({ stats, orders, filters }) {
     return (
-        <AuthenticatedLayout
+        <DashboardLayout
             header={
                 <h2 className="text-xl font-semibold leading-tight text-secondary">
                     Tableau de bord
@@ -45,17 +87,18 @@ export default function Dashboard({ stats, orders, filters }) {
             <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 lg:px-8">
                 {/* 1. Vue d'ensemble */}
                 <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <PendingAccountsCard count={stats.pending_accounts} />
                     <StatCard label="Commandes" value={stats.total_orders} />
                     <StatCard
                         label="Chiffre d'affaires total"
-                        value={formatPrice(stats.revenue)}
-                        hint={`Dont ${formatPrice(stats.delivered_revenue)} sur les commandes livrées`}
+                        value={formatFCFA(stats.revenue)}
+                        hint={`Dont ${formatFCFA(stats.delivered_revenue)} sur les commandes livrées`}
                     />
-                    <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200 sm:col-span-2 lg:col-span-1">
+                    <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200 sm:col-span-2 lg:col-span-3">
                         <p className="text-sm text-gray-500">
                             Répartition par statut
                         </p>
-                        <ul className="mt-2 space-y-2">
+                        <ul className="mt-2 grid gap-x-8 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
                             {stats.by_status.map((item) => {
                                 const percent = stats.total_orders
                                     ? Math.round(
@@ -69,7 +112,6 @@ export default function Dashboard({ stats, orders, filters }) {
                                         <div className="flex items-center justify-between text-sm">
                                             <StatusBadge
                                                 status={item.value}
-                                                label={item.label}
                                             />
                                             <span className="font-semibold text-gray-900">
                                                 {item.count}
@@ -131,7 +173,6 @@ export default function Dashboard({ stats, orders, filters }) {
                                             </div>
                                             <StatusBadge
                                                 status={order.status}
-                                                label={order.status_label}
                                             />
                                         </div>
                                         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
@@ -173,7 +214,7 @@ export default function Dashboard({ stats, orders, filters }) {
                                             </div>
                                         </dl>
                                         <p className="mt-3 border-t border-gray-100 pt-2 text-right font-bold text-gray-900">
-                                            {formatPrice(order.total_price)}
+                                            {formatFCFA(order.total_price)}
                                         </p>
                                     </li>
                                 ))}
@@ -238,16 +279,13 @@ export default function Dashboard({ stats, orders, filters }) {
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-3 text-right font-medium text-gray-900">
-                                                    {formatPrice(
+                                                    {formatFCFA(
                                                         order.total_price,
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <StatusBadge
                                                         status={order.status}
-                                                        label={
-                                                            order.status_label
-                                                        }
                                                     />
                                                 </td>
                                             </tr>
@@ -263,6 +301,6 @@ export default function Dashboard({ stats, orders, filters }) {
                     </div>
                 </section>
             </div>
-        </AuthenticatedLayout>
+        </DashboardLayout>
     );
 }

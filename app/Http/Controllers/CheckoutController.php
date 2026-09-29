@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PaymentMethod;
 use App\Models\Neighborhood;
-use App\Models\Order;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -17,9 +17,8 @@ class CheckoutController extends Controller
     {
         return Inertia::render('Checkout/Index', [
             'neighborhoods' => Neighborhood::orderBy('name')->get(['id', 'name']),
-            'paymentMethods' => collect(Order::PAYMENT_METHODS)
-                ->map(fn ($label, $value) => ['value' => $value, 'label' => $label])
-                ->values(),
+            'paymentMethods' => collect(PaymentMethod::cases())
+                ->map(fn (PaymentMethod $method) => ['value' => $method->value, 'label' => $method->label()]),
         ]);
     }
 }

@@ -1,11 +1,12 @@
 import ConfirmDeleteButton from '@/Components/ConfirmDeleteButton';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import OpeningStatusBadge from '@/Components/OpeningStatusBadge';
+import DashboardLayout from '@/Layouts/DashboardLayout';
 import { imageUrl } from '@/utils/format';
 import { Head, Link } from '@inertiajs/react';
 
 export default function Index({ stores }) {
     return (
-        <AuthenticatedLayout
+        <DashboardLayout
             header={
                 <div className="flex items-center justify-between gap-2">
                     <h2 className="text-xl font-semibold leading-tight text-secondary">
@@ -32,9 +33,9 @@ export default function Index({ stores }) {
                         {stores.map((store) => (
                             <li key={store.id} className="flex items-center gap-4 p-4">
                                 <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-gray-100">
-                                    {store.image && (
+                                    {store.cover_image && (
                                         <img
-                                            src={imageUrl(store.image)}
+                                            src={imageUrl(store.cover_image)}
                                             alt=""
                                             loading="lazy"
                                             className="h-full w-full object-cover"
@@ -47,6 +48,11 @@ export default function Index({ stores }) {
                                         {store.category} · {store.products_count} produit
                                         {store.products_count > 1 ? 's' : ''}
                                     </p>
+                                    <OpeningStatusBadge
+                                        isOpen={store.is_open_now}
+                                        detail={store.status_detail}
+                                        className="mt-1 max-w-full"
+                                    />
                                 </div>
                                 <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-4">
                                     <Link
@@ -66,6 +72,6 @@ export default function Index({ stores }) {
                     </ul>
                 )}
             </div>
-        </AuthenticatedLayout>
+        </DashboardLayout>
     );
 }

@@ -1,7 +1,7 @@
-import Spinner from '@/Components/Spinner';
-import StatusBadge from '@/Components/StatusBadge';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { formatPrice } from '@/utils/format';
+import Spinner from '@/Components/UI/Spinner';
+import StatusBadge from '@/Components/UI/StatusBadge';
+import DashboardLayout from '@/Layouts/DashboardLayout';
+import { formatFCFA } from '@/utils/format';
 import { Head, router, usePoll } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -24,14 +24,13 @@ function OrderCard({ order, children }) {
                     <p className="text-xs text-gray-500">Passée le {order.created_at}</p>
                 </div>
                 <p className="text-lg font-bold text-gray-900">
-                    {formatPrice(order.total_price)}
+                    {formatFCFA(order.total_price)}
                 </p>
             </div>
 
             {order.status !== 'en_attente' && (
                 <StatusBadge
                     status={order.status}
-                    label={order.status_label}
                     className="mt-2 self-start"
                 />
             )}
@@ -158,7 +157,7 @@ export default function Dashboard({ available, mine, deliveredToday }) {
     };
 
     return (
-        <AuthenticatedLayout
+        <DashboardLayout
             header={
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <h2 className="text-xl font-semibold leading-tight text-secondary">
@@ -238,6 +237,6 @@ export default function Dashboard({ available, mine, deliveredToday }) {
                     )}
                 </section>
             </div>
-        </AuthenticatedLayout>
+        </DashboardLayout>
     );
 }

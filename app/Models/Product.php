@@ -15,10 +15,12 @@ class Product extends Model
      */
     protected $fillable = [
         'store_id',
+        'menu_section',
         'name',
         'description',
         'price',
         'image',
+        'is_available',
     ];
 
     /**
@@ -30,6 +32,7 @@ class Product extends Model
     {
         return [
             'price' => 'decimal:2',
+            'is_available' => 'boolean',
         ];
     }
 

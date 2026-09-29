@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\OrderStatus;
 use App\Models\Neighborhood;
 use App\Models\Order;
 use App\Models\Store;
@@ -28,16 +29,19 @@ class DeliveryTest extends TestCase
 
     private function makeOrder(array $attributes = []): Order
     {
-        $store = Store::firstOrCreate(['name' => 'Chez Test'], ['category' => 'Restaurant']);
+        $store = (Store::firstWhere('name', 'Chez Test') ?? Store::factory()->inCategory('Restaurant')->create(['name' => 'Chez Test']));
         $product = $store->products()->firstOrCreate(['name' => 'Poulet'], ['price' => 4500]);
         $neighborhood = Neighborhood::firstOrCreate(['name' => 'Glass']);
 
         $order = Order::create([
+            'store_id' => $store->id,
             'client_id' => $this->client->id,
             'neighborhood_id' => $neighborhood->id,
+            'subtotal' => 9000,
             'total_price' => 9000,
             'address_landmarks' => 'Près de la pharmacie, portail bleu',
-            'payment_method' => 'cash_on_delivery',
+            'payment_method' => 'cash',
+            'cash_given' => 10000,
             'status' => 'en_attente',
             ...$attributes,
         ]);
@@ -55,7 +59,7 @@ class DeliveryTest extends TestCase
         $this->makeOrder(['delivery_id' => $this->courier->id, 'status' => 'livree']);
 
         $this->actingAs($this->courier)
-            ->get('/delivery/dashboard')
+            ->get('/delivery')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Delivery/Dashboard')
@@ -63,7 +67,8 @@ class DeliveryTest extends TestCase
                 ->where('available.0.id', $available->id)
                 ->where('available.0.neighborhood', 'Glass')
                 ->where('available.0.store', 'Chez Test')
-                ->where('available.0.payment_method_label', 'Paiement à la livraison')
+                ->where('available.0.payment_method_label', 'Espèces à la livraison')
+                ->where('available.0.cash_given', '10000.00')
                 ->where('available.0.address_landmarks', 'Près de la pharmacie, portail bleu')
                 ->where('available.0.client', null) // pas de téléphone avant acceptation
                 ->has('mine', 1)
@@ -83,7 +88,9 @@ class DeliveryTest extends TestCase
 
         $order->refresh();
         $this->assertSame($this->courier->id, $order->delivery_id);
-        $this->assertSame('acceptee', $order->status);
+        $this->assertSame(OrderStatus::Accepted, $order->status);
+        $this->assertSame(OrderStatus::Accepted, $order->statusHistories()->sole()->status);
+        $this->assertSame($this->courier->id, $order->statusHistories()->sole()->changed_by);
     }
 
     public function test_an_order_cannot_be_accepted_twice(): void
@@ -107,12 +114,12 @@ class DeliveryTest extends TestCase
         $this->actingAs($this->courier)
             ->put("/orders/{$order->id}/status", ['status' => 'en_livraison'])
             ->assertSessionHas('success');
-        $this->assertSame('en_livraison', $order->fresh()->status);
+        $this->assertSame(OrderStatus::Delivering, $order->fresh()->status);
 
         $this->actingAs($this->courier)
             ->put("/orders/{$order->id}/status", ['status' => 'livree'])
             ->assertSessionHas('success');
-        $this->assertSame('livree', $order->fresh()->status);
+        $this->assertSame(OrderStatus::Delivered, $order->fresh()->status);
     }
 
     public function test_status_cannot_skip_a_step_or_be_repeated(): void
@@ -123,7 +130,7 @@ class DeliveryTest extends TestCase
         $this->actingAs($this->courier)
             ->put("/orders/{$order->id}/status", ['status' => 'livree'])
             ->assertSessionHas('error');
-        $this->assertSame('acceptee', $order->fresh()->status);
+        $this->assertSame(OrderStatus::Accepted, $order->fresh()->status);
 
         // Double clic : la 2e requête identique est refusée.
         $this->actingAs($this->courier)->put("/orders/{$order->id}/status", ['status' => 'en_livraison']);
@@ -135,7 +142,7 @@ class DeliveryTest extends TestCase
         $this->actingAs($this->courier)
             ->put("/orders/{$order->id}/status", ['status' => 'en_attente'])
             ->assertSessionHasErrors('status');
-        $this->assertSame('en_livraison', $order->fresh()->status);
+        $this->assertSame(OrderStatus::Delivering, $order->fresh()->status);
     }
 
     public function test_only_the_assigned_courier_can_update_status(): void
@@ -147,7 +154,7 @@ class DeliveryTest extends TestCase
             ->put("/orders/{$order->id}/status", ['status' => 'en_livraison'])
             ->assertForbidden();
 
-        $this->assertSame('acceptee', $order->fresh()->status);
+        $this->assertSame(OrderStatus::Accepted, $order->fresh()->status);
     }
 
     public function test_non_couriers_cannot_use_delivery_actions(): void
@@ -162,6 +169,6 @@ class DeliveryTest extends TestCase
         }
 
         $this->assertNull($order->fresh()->delivery_id);
-        $this->assertSame('en_attente', $order->fresh()->status);
+        $this->assertSame(OrderStatus::Pending, $order->fresh()->status);
     }
 }

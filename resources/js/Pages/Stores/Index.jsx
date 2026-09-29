@@ -1,7 +1,11 @@
+import Button from '@/Components/UI/Button';
+import EmptyState from '@/Components/UI/EmptyState';
 import LazyImage from '@/Components/LazyImage';
+import OpeningStatusBadge from '@/Components/OpeningStatusBadge';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { imageUrl } from '@/utils/format';
 import { Head, Link } from '@inertiajs/react';
+import { SearchX, Store } from 'lucide-react';
 import { useState } from 'react';
 
 function CategoryChip({ active, onClick, children }) {
@@ -28,12 +32,17 @@ function StoreCard({ store }) {
             className="group block overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200 transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
             <LazyImage
-                src={imageUrl(store.image)}
+                src={imageUrl(store.cover_image)}
                 alt={store.name}
-                className="aspect-[3/2]"
+                className={`aspect-[3/2] transition ${store.is_open_now ? '' : 'opacity-60 grayscale-[40%]'}`}
             />
             <div className="p-4">
                 <h3 className="font-semibold text-gray-900">{store.name}</h3>
+                <OpeningStatusBadge
+                    isOpen={store.is_open_now}
+                    detail={store.status_detail}
+                    className="mt-1.5 max-w-full"
+                />
                 <p className="mt-1 flex items-center justify-between text-sm text-gray-500">
                     <span className="rounded-full bg-accent-100 px-2 py-0.5 text-xs font-semibold text-accent-900">
                         {store.category}
@@ -48,7 +57,7 @@ function StoreCard({ store }) {
     );
 }
 
-export default function Index({ stores, categories }) {
+export default function Index({ stores, categories, filters }) {
     const [selected, setSelected] = useState(null);
 
     const visibleCategories = selected ? [selected] : categories;
@@ -58,12 +67,25 @@ export default function Index({ stores, categories }) {
             <Head title="Boutiques" />
 
             <section className="pt-6">
-                <h1 className="text-2xl font-bold text-secondary sm:text-3xl">
-                    Faites-vous livrer à Libreville
-                </h1>
-                <p className="mt-1 text-gray-600">
-                    Restaurants, pharmacies et épiceries de votre quartier.
-                </p>
+                {filters.q ? (
+                    <>
+                        <h1 className="text-2xl font-bold text-secondary sm:text-3xl">
+                            Résultats pour « {filters.q} »
+                        </h1>
+                        <p className="mt-1 text-gray-600">
+                            {stores.length} commerce{stores.length > 1 ? 's' : ''} trouvé{stores.length > 1 ? 's' : ''}
+                        </p>
+                    </>
+                ) : (
+                    <>
+                        <h1 className="text-2xl font-bold text-secondary sm:text-3xl">
+                            Faites-vous livrer à Libreville
+                        </h1>
+                        <p className="mt-1 text-gray-600">
+                            Restaurants, pharmacies et épiceries de votre quartier.
+                        </p>
+                    </>
+                )}
             </section>
 
             {/* Filtres : défilement horizontal sur mobile */}
@@ -82,11 +104,27 @@ export default function Index({ stores, categories }) {
                 ))}
             </div>
 
-            {stores.length === 0 && (
-                <p className="mt-10 text-center text-gray-500">
-                    Aucune boutique disponible pour le moment.
-                </p>
-            )}
+            {stores.length === 0 &&
+                (filters.q ? (
+                    <EmptyState
+                        className="mt-6"
+                        icon={SearchX}
+                        title="Aucun résultat"
+                        description="Essayez un autre mot : nom du commerce, plat ou produit."
+                        action={
+                            <Button href={route('home')} variant="outline">
+                                Voir tous les commerces
+                            </Button>
+                        }
+                    />
+                ) : (
+                    <EmptyState
+                        className="mt-6"
+                        icon={Store}
+                        title="Aucune boutique pour le moment"
+                        description="Les commerces de Libreville arrivent bientôt sur Gogab."
+                    />
+                ))}
 
             {visibleCategories.map((category) => (
                 <section key={category} className="mt-6">

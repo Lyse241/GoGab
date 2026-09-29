@@ -1,30 +1,10 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+/**
+ * Ancien composant Breeze conservé pour les pages d’authentification et de profil :
+ * il délègue au design system. Préférer @/Components/UI/Input pour tout nouveau code.
+ */
+import Input from '@/Components/UI/Input';
+import { forwardRef } from 'react';
 
-export default forwardRef(function TextInput(
-    { type = 'text', className = '', isFocused = false, ...props },
-    ref,
-) {
-    const localRef = useRef(null);
-
-    useImperativeHandle(ref, () => ({
-        focus: () => localRef.current?.focus(),
-    }));
-
-    useEffect(() => {
-        if (isFocused) {
-            localRef.current?.focus();
-        }
-    }, [isFocused]);
-
-    return (
-        <input
-            {...props}
-            type={type}
-            className={
-                'rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary ' +
-                className
-            }
-            ref={localRef}
-        />
-    );
+export default forwardRef(function TextInput(props, ref) {
+    return <Input ref={ref} {...props} />;
 });
