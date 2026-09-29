@@ -159,6 +159,7 @@ class AccountStatusTest extends TestCase
                 ->where('auth.user.account_status', 'pending')
                 ->where('auth.user.account_status_label', 'En attente de validation')
                 ->where('auth.user.initials', 'MN')
+                ->where('auth.user.neighborhood_id', $user->neighborhood_id)
                 ->missing('auth.user.password')
                 ->missing('auth.user.remember_token')
                 ->missing('auth.user.address_landmarks')

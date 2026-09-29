@@ -181,6 +181,26 @@ class StoreHours
     }
 
     /**
+     * Horaires du jour (heure de Libreville) pour une carte commerce :
+     * « 08h00 – 22h00 », « 24 h/24 » ou « Fermé aujourd’hui ».
+     */
+    public static function todayLabel(Store $store, ?CarbonInterface $now = null): string
+    {
+        $day = self::days($store)->get(self::localize($now)->isoWeekday());
+
+        if (! $day?->hasHours()) {
+            return 'Fermé aujourd’hui';
+        }
+
+        $opens = substr($day->opens_at, 0, 5);
+        $closes = substr($day->closes_at, 0, 5);
+
+        return $opens === $closes
+            ? '24 h/24'
+            : str_replace(':', 'h', $opens).' – '.str_replace(':', 'h', $closes);
+    }
+
+    /**
      * Enregistre les 7 jours (une ligne par jour, mise à jour si elle existe).
      *
      * @param  iterable<array{day_of_week: int, is_closed?: bool, opens_at?: string|null, closes_at?: string|null}>  $days

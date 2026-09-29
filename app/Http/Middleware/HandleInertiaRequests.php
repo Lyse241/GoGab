@@ -4,9 +4,12 @@ namespace App\Http\Middleware;
 
 use App\Enums\AccountStatus;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
+use App\Models\Category;
 use App\Models\Neighborhood;
 use App\Models\User;
 use App\Services\ModerationService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -50,6 +53,8 @@ class HandleInertiaRequests extends Middleware
                     'account_status' => $user->account_status?->value,
                     'account_status_label' => $user->account_status?->label(),
                     'initials' => $user->initials(),
+                    // Quartier par défaut du sélecteur « Livrer à » tant que rien n'est choisi.
+                    'neighborhood_id' => $user->neighborhood_id,
                 ] : null,
                 'role' => $request->user()?->role?->value,
                 'role_label' => $request->user()?->role?->label(),
@@ -71,6 +76,18 @@ class HandleInertiaRequests extends Middleware
                 : [],
             // Sélecteur de quartier du header public.
             'neighborhoods' => fn () => Neighborhood::orderBy('name')->get(['id', 'name', 'zone']),
+            // Footer public : moyens de paiement et catégories les plus fournies.
+            'footer' => fn () => [
+                'payment_methods' => array_map(fn (PaymentMethod $method) => $method->label(), PaymentMethod::cases()),
+                'popular_categories' => Category::query()
+                    ->whereHas('stores', fn (Builder $query) => $query->visible())
+                    ->withCount(['stores' => fn (Builder $query) => $query->visible()])
+                    ->orderByDesc('stores_count')
+                    ->orderBy('sort_order')
+                    ->limit(5)
+                    ->get(['id', 'name', 'slug'])
+                    ->map(fn (Category $category) => ['name' => $category->name, 'slug' => $category->slug]),
+            ],
             // Libellés et couleurs des statuts : source unique pour UI/StatusBadge.
             'statuses' => fn () => [
                 'order' => $this->describe(OrderStatus::cases()),

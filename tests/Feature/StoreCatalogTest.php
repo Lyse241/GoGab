@@ -21,9 +21,10 @@ class StoreCatalogTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Stores/Index')
+                ->component('Public/Home')
                 ->has('stores', 2)
-                ->where('categories', ['Pharmacie', 'Restaurant'])
+                ->where('categories.0.name', 'Pharmacie')
+                ->where('categories.1.name', 'Restaurant')
                 ->where('stores.0.name', 'Pharmacie Test')
                 ->where('stores.0.category', 'Pharmacie')
                 ->where('stores.0.products_count', 1));
@@ -60,7 +61,8 @@ class StoreCatalogTest extends TestCase
                 ->where('filters.q', 'nyembwe')
                 ->has('stores', 1)
                 ->where('stores.0.name', 'Chez Maman Ngoye')
-                ->where('categories', ['Restaurant']));
+                // Les pastilles de catégories ne dépendent pas de la recherche.
+                ->has('categories', 3));
 
         $this->get('/?q=pharmacie')
             ->assertInertia(fn (Assert $page) => $page

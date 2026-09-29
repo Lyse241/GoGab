@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Store;
 use App\Services\StoreHours;
 use Illuminate\Database\Eloquent\Builder;
@@ -13,40 +14,88 @@ use Inertia\Response;
 class StoreController extends Controller
 {
     /**
-     * Page d'accueil : liste des boutiques (filtrage par catégorie côté React).
-     * `?q=` (recherche du header) : boutiques dont le nom ou un produit correspond.
+     * Page d'accueil (marketplace) : catégories en pastilles et commerces visibles (Store::visible()).
+     *
+     * - `?category=slug` : commerces de la catégorie (titre « Restaurants à Libreville »)
+     * - `?q=` : commerces dont le nom ou un produit correspond
+     *
+     * Le tri « quartier choisi d'abord » se fait dans le navigateur : le quartier est mémorisé
+     * côté client (localStorage) et chaque commerce envoie son quartier et sa zone.
      */
     public function index(Request $request): Response
     {
-        $q = trim((string) ($request->validate(['q' => ['nullable', 'string', 'max:100']])['q'] ?? ''));
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'category' => ['nullable', 'string', 'max:120'],
+        ]);
+        $q = trim((string) ($validated['q'] ?? ''));
         $like = '%'.addcslashes($q, '%_\\').'%';
+
+        // Catégories ayant au moins un commerce visible, dans l'ordre défini par l'admin.
+        $categories = Category::query()
+            ->whereHas('stores', fn (Builder $query) => $query->visible())
+            ->withCount(['stores' => fn (Builder $query) => $query->visible()])
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug', 'icon']);
+
+        // Catégorie inconnue ou vide : on l'ignore plutôt que d'afficher une erreur.
+        $category = filled($validated['category'] ?? null)
+            ? Category::where('slug', $validated['category'])->first(['id', 'name', 'slug'])
+            : null;
 
         $stores = Store::query()
             ->visible()
-            ->with(['category:id,name,sort_order', 'openingHours', 'owner:id,account_status'])
+            ->with(['category:id,name', 'neighborhood:id,name,zone', 'openingHours', 'owner:id,account_status'])
             ->withCount('products')
+            ->when($category, fn (Builder $query) => $query->where('category_id', $category->id))
             ->when($q !== '', fn (Builder $query) => $query->where(fn (Builder $query) => $query
                 ->where('name', 'like', $like)
                 ->orWhereHas('products', fn (Builder $query) => $query->where('name', 'like', $like))))
             ->orderBy('name')
-            ->get(['id', 'owner_id', 'name', 'category_id', 'cover_image', 'is_open', 'is_active']);
+            ->get(['id', 'owner_id', 'name', 'category_id', 'neighborhood_id', 'logo', 'cover_image', 'is_open', 'is_active']);
 
-        return Inertia::render('Stores/Index', [
-            // Commerces ouverts d'abord, puis par nom.
+        return Inertia::render('Public/Home', [
+            // Commerces ouverts d'abord, puis par nom (le navigateur remonte ensuite ceux du quartier choisi).
             'stores' => $stores
                 ->map(fn (Store $store) => $this->present($store) + [
+                    'logo' => $store->logo,
+                    'neighborhood_id' => $store->neighborhood_id,
+                    'neighborhood' => $store->neighborhood?->name,
+                    'zone' => $store->neighborhood?->zone,
+                    'today_hours' => StoreHours::todayLabel($store),
                     'products_count' => $store->products_count,
                 ])
                 ->sortBy([['is_open_now', 'desc'], ['name', 'asc']])
                 ->values(),
-            // Catégories des boutiques affichées, dans l'ordre défini par l'admin.
-            'categories' => $stores->pluck('category')
-                ->unique('id')
-                ->sortBy([['sort_order', 'asc'], ['name', 'asc']])
-                ->pluck('name')
-                ->values(),
-            'filters' => ['q' => $q],
+            'categories' => $categories->map(fn (Category $item) => [
+                'name' => $item->name,
+                'slug' => $item->slug,
+                'icon' => $item->icon,
+                'stores_count' => $item->stores_count,
+            ]),
+            'title' => $this->title($category, $q),
+            'filters' => ['q' => $q, 'category' => $category?->slug],
         ]);
+    }
+
+    /**
+     * Titre de la liste : « Restaurants à Libreville », « Résultats pour « poulet » »…
+     */
+    private function title(?Category $category, string $q): string
+    {
+        if ($q !== '') {
+            return "Résultats pour « {$q} »".($category ? ' · '.$category->name : '');
+        }
+
+        if (! $category) {
+            return 'Tous les commerces à Libreville';
+        }
+
+        // Pluriel du premier mot : « Restaurant » → « Restaurants », « Épicerie & courses » → « Épiceries & courses ».
+        $plural = preg_replace_callback('/^(\S+)/u', fn (array $word) => preg_match('/[sxz]$/iu', $word[1]) ? $word[1] : $word[1].'s', $category->name);
+
+        return "{$plural} à Libreville";
     }
 
     /**
