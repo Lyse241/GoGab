@@ -15,8 +15,7 @@ const sizes = {
 };
 
 /**
- * Recherche de commerces et de produits : envoie ?q= à la page d'accueil
- * (en gardant la catégorie choisie, s'il y en a une).
+ * Recherche globale de commerces et de produits : mène à /search?q=.
  *
  * - size : md (header) | lg (bandeau de l'accueil)
  * - placeholder : texte d'invite
@@ -24,26 +23,17 @@ const sizes = {
 export default function SearchBar({ className, size = 'md', placeholder = 'Restaurant, pharmacie, plat…' }) {
     const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
     const initial = params.get('q') ?? '';
-    const category = params.get('category');
     const [query, setQuery] = useState(initial);
     // Le header peut afficher plusieurs barres (mobile / desktop) : ids uniques.
     const id = useId();
     const s = sizes[size];
 
-    const go = (q) =>
-        router.get(route('home'), Object.fromEntries(Object.entries({ q, category }).filter(([, value]) => value)), {
-            preserveState: true,
-        });
-
     const submit = (event) => {
         event.preventDefault();
-        go(query.trim());
-    };
+        const q = query.trim();
 
-    const clear = () => {
-        setQuery('');
-        if (initial) {
-            go('');
+        if (q) {
+            router.get(route('search'), { q });
         }
     };
 
@@ -71,7 +61,7 @@ export default function SearchBar({ className, size = 'md', placeholder = 'Resta
             {query && (
                 <button
                     type="button"
-                    onClick={clear}
+                    onClick={() => setQuery('')}
                     className="absolute right-2 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-gray-500 hover:bg-gray-200"
                     aria-label="Effacer la recherche"
                 >

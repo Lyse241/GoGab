@@ -40,7 +40,7 @@ class StoreCatalogTest extends TestCase
         $this->get("/stores/{$store->id}")
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Stores/Show')
+                ->component('Public/Store')
                 ->where('store.name', 'Chez Test')
                 ->where('store.category', 'Restaurant')
                 ->has('products', 1)
@@ -92,7 +92,7 @@ class StoreCatalogTest extends TestCase
         $this->get("/stores/{$store->id}")
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Stores/Show')
+                ->component('Public/Store')
                 ->has('products', 3)
                 // Sections par ordre alphabétique, sans section en dernier ; l'indisponible reste listé.
                 ->where('products.0.name', 'Jus de bissap')

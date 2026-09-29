@@ -10,7 +10,7 @@ import Button from '@/Components/UI/Button';
 import { useNeighborhood } from '@/Contexts/NeighborhoodContext';
 import { cn } from '@/utils/cn';
 import { Link, usePage } from '@inertiajs/react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 /**
  * Layout des pages publiques (catalogue, panier, commande), visiteurs et connectés.
@@ -35,6 +35,23 @@ export default function PublicLayout({
 }) {
     const { user } = usePage().props.auth;
     const { neighborhoodId, setNeighborhoodId } = useNeighborhood();
+    const headerRef = useRef(null);
+
+    // Hauteur du header sticky en variable CSS (--header-h) : les barres collantes des pages
+    // (sections du menu…) se placent juste dessous, sur mobile comme sur desktop.
+    useEffect(() => {
+        const header = headerRef.current;
+        if (!header || typeof ResizeObserver === 'undefined') {
+            return undefined;
+        }
+
+        const update = () => document.documentElement.style.setProperty('--header-h', `${header.offsetHeight}px`);
+        const observer = new ResizeObserver(update);
+        observer.observe(header);
+        update();
+
+        return () => observer.disconnect();
+    }, []);
 
     // Utilisateur connecté sans quartier choisi sur cet appareil : on part de son quartier.
     useEffect(() => {
@@ -45,7 +62,7 @@ export default function PublicLayout({
 
     return (
         <div className={cn('flex min-h-screen flex-col overflow-x-clip', tone === 'white' ? 'bg-white' : 'bg-gray-50')}>
-            <header className="sticky top-0 z-30 border-b border-gray-100 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85">
+            <header ref={headerRef} className="sticky top-0 z-30 border-b border-gray-100 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85">
                 <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:gap-4 sm:px-6">
                     <Link
                         href={route('home')}

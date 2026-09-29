@@ -107,15 +107,20 @@ class StoreController extends Controller
 
         // Menu par section (ordre alphabétique, produits sans section en dernier). Les produits
         // indisponibles restent affichés (grisés, non commandables) : le client sait qu'ils existent.
-        $store->load(['category:id,name', 'openingHours', 'products' => fn ($query) => $query
+        $store->load(['category:id,name', 'neighborhood:id,name,zone', 'openingHours', 'products' => fn ($query) => $query
             ->select(['id', 'store_id', 'menu_section', 'name', 'description', 'price', 'image', 'is_available'])
             ->orderByRaw('menu_section is null')
             ->orderBy('menu_section')
             ->orderBy('name'),
         ]);
 
-        return Inertia::render('Stores/Show', [
+        return Inertia::render('Public/Store', [
             'store' => $this->present($store) + [
+                'description' => $store->description,
+                'logo' => $store->logo,
+                'neighborhood' => $store->neighborhood?->name,
+                'zone' => $store->neighborhood?->zone,
+                'address_landmarks' => $store->address_landmarks,
                 'opening_hours' => StoreHours::schedule($store),
                 // Jour courant à Libreville (1 = lundi), pour surligner la ligne du jour.
                 'today' => StoreHours::now()->isoWeekday(),

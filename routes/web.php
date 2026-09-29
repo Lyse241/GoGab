@@ -11,6 +11,7 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StoreController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +20,7 @@ use Inertia\Inertia;
 // Catalogue public
 Route::get('/', [StoreController::class, 'index'])->name('home');
 Route::get('/stores/{store}', [StoreController::class, 'show'])->name('stores.show');
+Route::get('/search', SearchController::class)->name('search');
 Route::get('/stores/{store}/status', [StoreController::class, 'status'])->name('stores.status');
 
 // Vitrine des composants UI, pour validation visuelle : uniquement en environnement local.
