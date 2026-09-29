@@ -6,7 +6,6 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Http\Requests\StoreOrderRequest;
 use App\Models\Order;
-use App\Models\Product;
 use App\Services\OrderWorkflow;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,36 +20,50 @@ class OrderController extends Controller
      */
     public function store(StoreOrderRequest $request, OrderWorkflow $workflow): RedirectResponse
     {
-        $lines = collect($request->validated('items'));
-        $products = Product::whereIn('id', $lines->pluck('product_id'))->get()->keyBy('id');
-
-        // Prix relus en base : le prix affiché dans le navigateur n'est jamais utilisé.
-        $items = $lines->map(fn (array $line) => [
-            'product_id' => $line['product_id'],
-            'quantity' => $line['quantity'],
-            'price' => $products[$line['product_id']]->price,
-        ]);
-
-        $subtotal = $items->sum(fn (array $item) => $item['price'] * $item['quantity']);
-        $deliveryFee = 0; // Frais de livraison pas encore définis.
+        // Prix, frais et total recalculés depuis la base par la validation (OrderPricing) :
+        // le montant affiché dans le navigateur n'est jamais utilisé.
+        $quote = $request->quote();
         $paymentMethod = PaymentMethod::from($request->validated('payment_method'));
 
-        // Statut initial, historique et notification de l'entreprise : OrderWorkflow.
+        // Statut initial, lignes à prix figés, historique et notification de l'entreprise, dans
+        // une transaction : OrderWorkflow::place().
         $order = $workflow->place($request->user(), [
-            'store_id' => $products->first()->store_id, // une seule boutique (vérifié par StoreOrderRequest)
+            'store_id' => $request->store()->id,
             'neighborhood_id' => $request->validated('neighborhood_id'),
             'address_landmarks' => trim($request->validated('address_landmarks')),
-            'subtotal' => $subtotal,
-            'delivery_fee' => $deliveryFee,
-            'total_price' => $subtotal + $deliveryFee,
+            'subtotal' => $quote['subtotal'],
+            'delivery_fee' => $quote['delivery_fee'],
+            'total_price' => $quote['total'],
             'payment_method' => $paymentMethod,
             'cash_given' => $paymentMethod === PaymentMethod::Cash ? $request->validated('cash_given') : null,
             'client_note' => $request->validated('client_note'),
-        ], $items);
+        ], $quote['items']);
 
-        return redirect()
-            ->route('orders.show', $order)
-            ->with('success', 'Votre commande a bien été enregistrée.');
+        return redirect()->route('orders.confirmation', $order);
+    }
+
+    /**
+     * Confirmation juste après la commande : numéro et « Suivre ma commande ».
+     */
+    public function confirmation(Request $request, Order $order): Response
+    {
+        abort_unless($request->user()->can('view', $order), 404);
+
+        $order->load('store:id,name');
+
+        return Inertia::render('Orders/Confirmation', [
+            'order' => [
+                'id' => $order->id,
+                'number' => $order->reference,
+                'store_id' => $order->store_id,
+                'store' => $order->store->name,
+                'total_price' => $order->total_price,
+                'payment_method' => $order->payment_method->value,
+                'payment_method_label' => $order->payment_method->label(),
+                'cash_given' => $order->cash_given,
+                'change_due' => $order->change_due,
+            ],
+        ]);
     }
 
     /**
@@ -82,7 +95,7 @@ class OrderController extends Controller
         // OrderPolicy::view ; 404 plutôt que 403 : on ne révèle pas l'existence de la commande.
         abort_unless($request->user()->can('view', $order), 404);
 
-        $order->load(['store:id,name', 'neighborhood:id,name', 'items.product:id,name,image']);
+        $order->load(['store:id,name', 'neighborhood:id,name', 'items.product:id,name,image', 'statusHistories']);
 
         return Inertia::render('Orders/Show', [
             'order' => [
@@ -93,12 +106,21 @@ class OrderController extends Controller
                 'delivery_fee' => $order->delivery_fee,
                 'total_price' => $order->total_price,
                 'address_landmarks' => $order->address_landmarks,
+                'payment_method' => $order->payment_method->value,
                 'payment_method_label' => $order->payment_method->label(),
                 'cash_given' => $order->cash_given,
+                'change_due' => $order->change_due,
                 'client_note' => $order->client_note,
+                'cancel_reason' => $order->cancel_reason,
+                // Étapes déjà franchies (heure de Libreville).
+                'history' => $order->statusHistories->map(fn ($entry) => [
+                    'status' => $entry->status->value,
+                    'label' => $entry->status->label(),
+                    'at' => $entry->created_at->setTimezone(config('gogab.timezone'))->format('d/m à H\hi'),
+                ]),
                 'neighborhood' => $order->neighborhood->name,
                 'store' => $order->store->name,
-                'created_at' => $order->created_at->format('d/m/Y à H:i'),
+                'created_at' => $order->created_at->setTimezone(config('gogab.timezone'))->format('d/m/Y à H\hi'),
                 'items' => $order->items->map(fn ($item) => [
                     'id' => $item->id,
                     'name' => $item->product->name,

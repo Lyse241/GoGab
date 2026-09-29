@@ -130,7 +130,7 @@ class HomePageTest extends TestCase
 
         $this->get('/')
             ->assertInertia(fn (Assert $page) => $page
-                ->where('footer.payment_methods', ['Airtel Money', 'Moov Money', 'Espèces à la livraison'])
+                ->where('footer.payment_methods', ['Airtel Money', 'Moov Money', 'Paiement à la livraison'])
                 ->where('footer.popular_categories.0', ['name' => 'Restaurant', 'slug' => 'restaurant'])
                 ->where('footer.popular_categories.1.slug', 'pharmacie'));
     }

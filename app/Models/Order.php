@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -47,6 +48,17 @@ class Order extends Model
             'payment_method' => PaymentMethod::class,
             'status' => OrderStatus::class,
         ];
+    }
+
+    /**
+     * Monnaie à rendre par le livreur (montant remis − total) ; null hors paiement à la livraison
+     * ou si aucun montant n'a été indiqué.
+     */
+    protected function changeDue(): Attribute
+    {
+        return Attribute::get(fn (): ?float => $this->payment_method === PaymentMethod::Cash && $this->cash_given !== null
+            ? round((float) $this->cash_given - (float) $this->total_price, 2)
+            : null);
     }
 
     /**

@@ -34,7 +34,7 @@ export default function Show({ order }) {
                         </svg>
                     </div>
                     <h1 className="mt-3 text-2xl font-bold text-secondary">
-                        Merci pour votre commande !
+                        Suivi de ma commande
                     </h1>
                     <p className="mt-1 text-gray-600">
                         Commande{' '}
@@ -56,7 +56,31 @@ export default function Show({ order }) {
                             <span className="whitespace-pre-line">{order.address_landmarks}</span>
                         </Detail>
                         <Detail label="Paiement">{order.payment_method_label}</Detail>
+                        {order.change_due !== null && (
+                            <Detail label="Montant remis">
+                                {formatFCFA(order.cash_given)} · monnaie à rendre : {formatFCFA(order.change_due)}
+                            </Detail>
+                        )}
+                        {order.client_note && (
+                            <Detail label="Note pour le commerce">
+                                <span className="whitespace-pre-line">{order.client_note}</span>
+                            </Detail>
+                        )}
+                        {order.cancel_reason && <Detail label="Motif">{order.cancel_reason}</Detail>}
                     </dl>
+                </section>
+
+                <section id="suivi" className="mt-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
+                    <h2 className="font-semibold text-gray-900">Suivi</h2>
+                    <ol className="relative mt-3 space-y-3 border-l-2 border-gray-100 pl-5">
+                        {order.history.map((step, index) => (
+                            <li key={index} className="relative">
+                                <span className="absolute -left-[1.6rem] top-1 h-3 w-3 rounded-full bg-primary-500 ring-4 ring-white" aria-hidden="true" />
+                                <p className="text-sm font-semibold text-gray-900">{step.label}</p>
+                                <p className="text-xs text-gray-500">{step.at}</p>
+                            </li>
+                        ))}
+                    </ol>
                 </section>
 
                 <section className="mt-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
@@ -88,7 +112,15 @@ export default function Show({ order }) {
                             </li>
                         ))}
                     </ul>
-                    <div className="flex items-center justify-between border-t border-gray-200 pt-3">
+                    <div className="flex items-center justify-between border-t border-gray-200 pt-3 text-sm">
+                        <span className="text-gray-600">Sous-total</span>
+                        <span className="font-medium text-gray-900">{formatFCFA(order.subtotal)}</span>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 text-sm">
+                        <span className="text-gray-600">Frais de livraison</span>
+                        <span className="font-medium text-gray-900">{formatFCFA(order.delivery_fee)}</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between border-t border-gray-200 pt-3">
                         <span className="font-medium text-gray-700">Total</span>
                         <span className="text-lg font-bold text-gray-900">
                             {formatFCFA(order.total_price)}

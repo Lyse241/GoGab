@@ -1,130 +1,112 @@
+import { StoreThumb } from '@/Components/Cart/CartList';
+import { atStore } from '@/Components/Cart/CartPanel';
 import FormErrors, { focusFirstError } from '@/Components/FormErrors';
-import InputError from '@/Components/InputError';
-import Spinner from '@/Components/UI/Spinner';
+import LazyImage from '@/Components/LazyImage';
+import NeighborhoodSelect from '@/Components/NeighborhoodSelect';
+import Button from '@/Components/UI/Button';
+import Card, { CardHeader } from '@/Components/UI/Card';
+import EmptyState from '@/Components/UI/EmptyState';
+import Input from '@/Components/UI/Input';
+import Textarea from '@/Components/UI/Textarea';
 import { useCart } from '@/Contexts/CartContext';
 import { useNeighborhood } from '@/Contexts/NeighborhoodContext';
 import useStoreStatus from '@/Hooks/useStoreStatus';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { cartTotals } from '@/utils/cartTotals';
-import { formatFCFA } from '@/utils/format';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { Clock } from 'lucide-react';
+import { cn } from '@/utils/cn';
+import { formatFCFA, imageUrl } from '@/utils/format';
+import { Head, Link, useForm } from '@inertiajs/react';
+import { Banknote, Check, CircleAlert, Clock, Hourglass, MapPin, ShoppingBag, Smartphone } from 'lucide-react';
 
-function StoreClosedAlert({ status, storeName }) {
-    return (
-        <div role="alert" className="flex items-start gap-3 rounded-2xl border border-accent-300 bg-accent-50 p-4">
-            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-accent-700" aria-hidden="true" />
-            <div className="text-sm">
-                <p className="font-semibold text-secondary-900">
-                    {storeName} · {status.status_label}
-                </p>
-                <p className="mt-0.5 text-gray-700">
-                    Votre panier est conservé : vous pourrez commander dès la réouverture.
-                </p>
-            </div>
-        </div>
-    );
-}
-
-const LANDMARKS_MAX = 500;
+const LANDMARKS_MIN = 10;
 
 /**
- * Validation côté client (le serveur revalidera à l'enregistrement).
- * Retourne un objet { champ: message } vide si tout est correct.
+ * Validation côté client (le serveur revalide tout à l'envoi).
  */
-function validate(data) {
+function validate(data, total) {
     const errors = {};
 
     if (!data.neighborhood_id) {
         errors.neighborhood_id = 'Choisissez votre quartier de livraison.';
     }
-
-    const landmarks = data.address_landmarks.trim();
-    if (!landmarks) {
-        errors.address_landmarks =
-            'Indiquez des repères pour que le livreur trouve votre adresse.';
-    } else if (landmarks.length < 10) {
-        errors.address_landmarks =
-            'Soyez un peu plus précis (10 caractères minimum).';
-    } else if (landmarks.length > LANDMARKS_MAX) {
-        errors.address_landmarks = `${LANDMARKS_MAX} caractères maximum.`;
+    if (data.address_landmarks.trim().length < LANDMARKS_MIN) {
+        errors.address_landmarks = data.address_landmarks.trim()
+            ? 'Soyez un peu plus précis (10 caractères minimum).'
+            : 'Indiquez des repères pour que le livreur trouve votre adresse.';
     }
-
     if (!data.payment_method) {
         errors.payment_method = 'Choisissez un mode de paiement.';
+    }
+    if (data.payment_method === 'cash') {
+        const cash = Number(data.cash_given);
+        if (!data.cash_given) {
+            errors.cash_given = 'Indiquez avec quel montant vous paierez, pour que le livreur prévoie la monnaie.';
+        } else if (cash < total) {
+            errors.cash_given = `Le montant remis doit couvrir le total de la commande (${formatFCFA(total)}).`;
+        }
     }
 
     return errors;
 }
 
-function Section({ title, children }) {
+function PaymentCard({ method, selected, onSelect }) {
+    const Icon = method.mobile_money ? Smartphone : Banknote;
+
     return (
-        <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
-            <h2 className="mb-3 font-semibold text-gray-900">{title}</h2>
-            {children}
-        </section>
+        <label
+            className={cn(
+                'relative flex cursor-pointer items-start gap-3 rounded-2xl p-4 ring-1 transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary',
+                selected ? 'bg-primary-50 ring-2 ring-primary-500' : 'bg-white ring-gray-200 hover:ring-gray-300',
+            )}
+        >
+            <input
+                type="radio"
+                name="payment_method"
+                value={method.value}
+                checked={selected}
+                onChange={() => onSelect(method.value)}
+                className="sr-only"
+            />
+            <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', selected ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600')}>
+                <Icon className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <span className="min-w-0 flex-1">
+                <span className="block font-semibold text-secondary-900">{method.label}</span>
+                <span className="mt-0.5 block text-sm text-gray-600">{method.hint}</span>
+            </span>
+            {selected && <Check className="h-5 w-5 shrink-0 text-primary-600" aria-hidden="true" />}
+        </label>
     );
 }
 
-function OrderSummary({ cart, unavailableIds }) {
-    const { total } = cartTotals(cart.items, unavailableIds);
-
-    return (
-        <Section title="Récapitulatif">
-            <p className="text-sm text-gray-600">
-                Boutique : <span className="font-medium">{cart.store.name}</span>
-            </p>
-            <ul className="mt-3 divide-y divide-gray-100 text-sm">
-                {cart.items.map((item) => (
-                    <li
-                        key={item.product_id}
-                        className="flex justify-between gap-3 py-2"
-                    >
-                        <span className={`min-w-0 ${unavailableIds.has(item.product_id) ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
-                            <span className="font-medium">{item.quantity} ×</span>{' '}
-                            {item.name}
-                        </span>
-                        <span className={`shrink-0 ${unavailableIds.has(item.product_id) ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                            {formatFCFA(item.price * item.quantity)}
-                        </span>
-                    </li>
-                ))}
-            </ul>
-            <div className="mt-2 flex items-center justify-between border-t border-gray-200 pt-3">
-                <span className="font-medium text-gray-700">Total</span>
-                <span className="text-lg font-bold text-gray-900">
-                    {formatFCFA(total)}
-                </span>
-            </div>
-            <Link
-                href={route('cart', { store: cart.store.id })}
-                className="mt-3 inline-block text-sm font-medium text-secondary hover:underline"
-            >
-                Modifier le panier
-            </Link>
-        </Section>
-    );
-}
-
-export default function Index({ store, neighborhoods, paymentMethods }) {
+/**
+ * Tunnel de commande du panier d'UN commerce : récapitulatif (lecture seule), note pour le
+ * commerce, adresse (préremplie depuis le profil), paiement, montant remis en espèces avec la
+ * monnaie à rendre, sous-total + frais + total. Seul le panier de ce commerce est envoyé et vidé.
+ */
+export default function Index({ store, address, neighborhoods, paymentMethods, deliveryFee, quickCashAmounts, canOrder }) {
     const carts = useCart();
-    // Un checkout = le panier de CE commerce uniquement (les autres paniers ne sont pas touchés).
     const cart = carts.cartOf(store.id) ?? { store, items: [] };
-    const { user } = usePage().props.auth;
-    // Le serveur refusera de toute façon une commande pour un commerce fermé.
+    const { neighborhoodId } = useNeighborhood();
+
+    // Vérification légère : commerce ouvert ? produits encore disponibles ?
     const { status } = useStoreStatus(store.id, cart.items.map((item) => item.product_id));
-    const closed = status !== null && !status.is_open_now;
-    // Articles devenus indisponibles depuis leur ajout : à retirer depuis le panier.
+    const isOpen = status ? status.is_open_now : store.is_open_now;
+    const statusLabel = status?.status_label ?? store.status_label;
     const unavailableIds = new Set(status?.unavailable_product_ids ?? []);
     const unavailableItems = cart.items.filter((item) => unavailableIds.has(item.product_id));
-    const { total } = cartTotals(cart.items, unavailableIds);
-    // Quartier choisi dans le header, s'il est bien desservi.
-    const { neighborhoodId } = useNeighborhood();
-    const preselected = neighborhoods.some((n) => n.id === neighborhoodId) ? String(neighborhoodId) : '';
+    const { total: subtotal, count } = cartTotals(cart.items, unavailableIds);
+    const total = subtotal + deliveryFee;
+
+    // Adresse du profil, sinon le quartier choisi dans le header.
+    const defaultNeighborhood = address.neighborhood_id ?? (neighborhoods.some((n) => n.id === neighborhoodId) ? neighborhoodId : '');
+
     const { data, setData, errors, setError, clearErrors, processing, post, transform } = useForm({
-        neighborhood_id: preselected,
-        address_landmarks: '',
+        neighborhood_id: defaultNeighborhood ? String(defaultNeighborhood) : '',
+        address_landmarks: address.address_landmarks ?? '',
         payment_method: '',
+        cash_given: '',
+        client_note: '',
     });
 
     const update = (field, value) => {
@@ -132,215 +114,269 @@ export default function Index({ store, neighborhoods, paymentMethods }) {
         clearErrors(field);
     };
 
-    const submit = (e) => {
-        e.preventDefault();
+    const cash = Number(data.cash_given) || 0;
+    const changeDue = data.payment_method === 'cash' && cash > 0 ? cash - total : null;
+    const blocked = !canOrder || !isOpen || unavailableItems.length > 0 || count === 0;
 
-        const clientErrors = validate(data);
+    const submit = (event) => {
+        event.preventDefault();
+        if (blocked) {
+            return;
+        }
+
+        const clientErrors = validate(data, total);
         if (Object.keys(clientErrors).length > 0) {
             setError(clientErrors);
-            // Amène le premier champ en erreur à l'écran (utile sur mobile).
-            document
-                .getElementById(Object.keys(clientErrors)[0])
-                ?.focus();
+            focusFirstError(clientErrors);
             return;
         }
 
         // Seuls les identifiants et quantités sont envoyés : le serveur relit les prix.
-        transform((formData) => ({
-            ...formData,
-            items: cart.items.map((item) => ({
-                product_id: item.product_id,
-                quantity: item.quantity,
-            })),
+        transform((values) => ({
+            ...values,
+            store_id: store.id,
+            cash_given: values.payment_method === 'cash' ? values.cash_given : null,
+            items: cart.items.map((item) => ({ product_id: item.product_id, quantity: item.quantity })),
         }));
 
         post(route('orders.store'), {
-            // Panier de ce commerce vidé seulement une fois la commande enregistrée.
+            // Seul le panier de ce commerce est vidé, une fois la commande enregistrée.
             onSuccess: () => carts.clearCart(store.id),
             onError: focusFirstError,
         });
     };
 
-    // Erreurs serveur liées au panier (panier vide, produit supprimé, plusieurs boutiques…).
-    const cartError =
-        errors.items ??
-        Object.entries(errors).find(([key]) => key.startsWith('items.'))?.[1];
+    const cartError = errors.items ?? Object.entries(errors).find(([key]) => key.startsWith('items.'))?.[1];
 
     if (cart.items.length === 0) {
         return (
             <PublicLayout search={false}>
                 <Head title="Commande" />
-                <div className="mx-auto mt-16 max-w-md text-center">
-                    <h1 className="text-xl font-bold text-gray-900">
-                        Votre panier est vide
-                    </h1>
-                    <p className="mt-2 text-gray-600">
-                        Ajoutez des articles avant de passer commande.
-                    </p>
-                    <Link
-                        href={route('stores.show', store.id)}
-                        className="mt-6 inline-block rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
-                    >
-                        Retour chez {store.name}
-                    </Link>
-                </div>
+                <EmptyState
+                    className="mx-auto mt-10 max-w-lg"
+                    icon={ShoppingBag}
+                    title={`Votre panier ${atStore(store.name)} est vide`}
+                    description="Ajoutez des articles avant de passer commande."
+                    action={<Button href={route('stores.show', store.id)}>Retour {atStore(store.name)}</Button>}
+                />
             </PublicLayout>
         );
     }
 
     return (
         <PublicLayout search={false}>
-            <Head title="Commande" />
+            <Head title={`Commande ${atStore(store.name)}`} />
 
-            <h1 className="mt-6 text-2xl font-bold text-secondary">
-                Finaliser la commande
-            </h1>
+            <h1 className="mt-6 text-2xl font-bold text-secondary-900">Finaliser la commande</h1>
 
-            <form
-                onSubmit={submit}
-                noValidate
-                className="mt-4 grid gap-4 lg:grid-cols-[1fr_380px] lg:items-start"
-            >
-                {/* Sur mobile, le récapitulatif passe en premier. */}
-                <div className="lg:order-2 lg:sticky lg:top-20">
-                    <OrderSummary cart={cart} unavailableIds={unavailableIds} />
+            <form onSubmit={submit} noValidate className="mt-4 grid gap-5 pb-10 lg:grid-cols-[1fr_24rem] lg:items-start">
+                {/* Récapitulatif : en premier sur mobile, colonne collante sur desktop */}
+                <div className="space-y-4 lg:sticky lg:top-[calc(var(--header-h,4rem)+1rem)] lg:order-2">
+                    <Card>
+                        <div className="mb-3 flex items-center gap-3">
+                            <StoreThumb store={store} className="h-11 w-11" />
+                            <div className="min-w-0">
+                                <p className="truncate font-semibold text-secondary-900">{store.name}</p>
+                                <p className="text-sm text-gray-500">
+                                    {count} article{count > 1 ? 's' : ''}
+                                </p>
+                            </div>
+                        </div>
+                        <ul className="divide-y divide-gray-100">
+                            {cart.items.map((item) => {
+                                const unavailable = unavailableIds.has(item.product_id);
+
+                                return (
+                                    <li key={item.product_id} className="flex items-center gap-3 py-2.5">
+                                        <LazyImage src={imageUrl(item.image)} alt="" className={cn('h-11 w-11 shrink-0 rounded-lg', unavailable && 'opacity-50 grayscale')} />
+                                        <span className={cn('min-w-0 flex-1 text-sm', unavailable ? 'text-gray-400 line-through' : 'text-gray-800')}>
+                                            <span className="font-semibold">{item.quantity} ×</span> {item.name}
+                                        </span>
+                                        <span className={cn('shrink-0 text-sm font-medium', unavailable ? 'text-gray-400 line-through' : 'text-gray-900')}>
+                                            {formatFCFA(item.price * item.quantity)}
+                                        </span>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                        <dl className="mt-3 space-y-1.5 border-t border-gray-100 pt-3 text-sm">
+                            <div className="flex justify-between">
+                                <dt className="text-gray-600">Sous-total</dt>
+                                <dd className="font-medium text-gray-900">{formatFCFA(subtotal)}</dd>
+                            </div>
+                            <div className="flex justify-between">
+                                <dt className="text-gray-600">Frais de livraison</dt>
+                                <dd className="font-medium text-gray-900">{formatFCFA(deliveryFee)}</dd>
+                            </div>
+                            <div className="flex justify-between border-t border-gray-100 pt-2 text-base">
+                                <dt className="font-semibold text-gray-900">Total</dt>
+                                <dd className="text-lg font-bold text-gray-900">{formatFCFA(total)}</dd>
+                            </div>
+                        </dl>
+                        <Link href={route('cart', { store: store.id })} className="mt-3 inline-block text-sm font-medium text-secondary hover:underline">
+                            Modifier le panier
+                        </Link>
+                    </Card>
                 </div>
 
                 <div className="space-y-4 lg:order-1">
-                    <Section title="Adresse de livraison">
-                        <label
-                            htmlFor="neighborhood_id"
-                            className="block text-sm font-medium text-gray-700"
-                        >
-                            Quartier <span className="text-red-600">*</span>
-                        </label>
-                        <select
-                            id="neighborhood_id"
-                            value={data.neighborhood_id}
-                            onChange={(e) => update('neighborhood_id', e.target.value)}
-                            aria-invalid={!!errors.neighborhood_id}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
-                        >
-                            <option value="">Sélectionnez votre quartier</option>
-                            {neighborhoods.map((neighborhood) => (
-                                <option key={neighborhood.id} value={neighborhood.id}>
-                                    {neighborhood.name}
-                                </option>
-                            ))}
-                        </select>
-                        <InputError message={errors.neighborhood_id} className="mt-1" />
+                    <FormErrors errors={cartError ? {} : errors} />
 
-                        <label
-                            htmlFor="address_landmarks"
-                            className="mt-4 block text-sm font-medium text-gray-700"
-                        >
-                            Repères pour le livreur{' '}
-                            <span className="text-red-600">*</span>
-                        </label>
-                        <textarea
-                            id="address_landmarks"
-                            rows={3}
-                            maxLength={LANDMARKS_MAX}
-                            value={data.address_landmarks}
-                            onChange={(e) => update('address_landmarks', e.target.value)}
-                            placeholder="Ex : près de la pharmacie Awendjé, portail bleu"
-                            aria-invalid={!!errors.address_landmarks}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
-                        />
-                        <div className="mt-1 flex justify-between gap-2">
-                            <InputError message={errors.address_landmarks} />
-                            <span className="ml-auto shrink-0 text-xs text-gray-400">
-                                {data.address_landmarks.length}/{LANDMARKS_MAX}
-                            </span>
+                    <Card>
+                        <CardHeader title="Adresse de livraison" action={<MapPin className="h-5 w-5 text-primary-600" aria-hidden="true" />} />
+                        <div className="space-y-4">
+                            <NeighborhoodSelect
+                                id="neighborhood_id"
+                                label="Quartier"
+                                required
+                                neighborhoods={neighborhoods}
+                                value={data.neighborhood_id}
+                                onChange={(e) => update('neighborhood_id', e.target.value)}
+                                error={errors.neighborhood_id}
+                            />
+                            <Textarea
+                                id="address_landmarks"
+                                label="Repères pour le livreur"
+                                required
+                                rows={3}
+                                maxLength={500}
+                                placeholder="Ex. : près de la pharmacie Awendjé, portail bleu"
+                                hint={address.address_landmarks ? 'Prérempli depuis votre profil : modifiable pour cette commande.' : undefined}
+                                value={data.address_landmarks}
+                                onChange={(e) => update('address_landmarks', e.target.value)}
+                                error={errors.address_landmarks}
+                            />
                         </div>
+                    </Card>
 
-                        {user.phone && (
-                            <p className="mt-3 text-sm text-gray-500">
-                                Le livreur pourra vous joindre au{' '}
-                                <span className="font-medium text-gray-700">
-                                    {user.phone}
-                                </span>
-                                .
-                            </p>
-                        )}
-                    </Section>
-
-                    <Section title="Mode de paiement">
+                    <Card>
+                        <CardHeader title="Mode de paiement" />
                         <fieldset>
                             <legend className="sr-only">Mode de paiement</legend>
-                            <div id="payment_method" tabIndex={-1} className="space-y-2 focus:outline-none">
+                            <div id="payment_method" tabIndex={-1} className="grid gap-3 focus:outline-none sm:grid-cols-3">
                                 {paymentMethods.map((method) => (
-                                    <label
+                                    <PaymentCard
                                         key={method.value}
-                                        className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition ${
-                                            data.payment_method === method.value
-                                                ? 'border-primary-600 bg-primary-50'
-                                                : 'border-gray-200 hover:border-gray-300'
-                                        }`}
-                                    >
-                                        <input
-                                            type="radio"
-                                            name="payment_method"
-                                            value={method.value}
-                                            checked={data.payment_method === method.value}
-                                            onChange={(e) => update('payment_method', e.target.value)}
-                                            className="text-primary-600 focus:ring-primary"
-                                        />
-                                        <span className="font-medium text-gray-800">
-                                            {method.label}
-                                        </span>
-                                    </label>
+                                        method={method}
+                                        selected={data.payment_method === method.value}
+                                        onSelect={(value) => update('payment_method', value)}
+                                    />
                                 ))}
                             </div>
+                            {errors.payment_method && <p className="mt-2 text-sm text-danger-600">{errors.payment_method}</p>}
                         </fieldset>
-                        <InputError message={errors.payment_method} className="mt-1" />
-                        <p className="mt-3 text-xs text-gray-500">
-                            Aucun paiement n'est effectué en ligne sur Gogab :
-                            seul votre choix est enregistré avec la commande.
-                        </p>
-                    </Section>
+
+                        {data.payment_method === 'cash' && (
+                            <div className="mt-5 rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-100">
+                                <p id="cash-label" className="font-semibold text-secondary-900">
+                                    Avec quel montant paierez-vous ?
+                                </p>
+                                <p className="mt-0.5 text-sm text-gray-600">Le livreur prévoira la monnaie.</p>
+                                <div className="mt-3 flex flex-wrap gap-2" role="group" aria-labelledby="cash-label">
+                                    {[{ value: total, label: 'Montant exact' }, ...quickCashAmounts.filter((amount) => amount > total).map((amount) => ({ value: amount, label: formatFCFA(amount) }))].map(({ value, label }) => (
+                                        <button
+                                            key={label}
+                                            type="button"
+                                            onClick={() => update('cash_given', String(value))}
+                                            aria-pressed={cash === value}
+                                            className={cn(
+                                                'h-11 rounded-full px-4 text-sm font-semibold ring-1 ring-inset transition',
+                                                cash === value ? 'bg-secondary text-white ring-secondary' : 'bg-white text-gray-700 ring-gray-200 hover:bg-gray-100',
+                                            )}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                                <Input
+                                    id="cash_given"
+                                    label="Autre montant"
+                                    inputMode="numeric"
+                                    suffix="FCFA"
+                                    wrapperClassName="mt-3"
+                                    placeholder={String(Math.ceil(total / 1000) * 1000)}
+                                    value={data.cash_given}
+                                    onChange={(e) => update('cash_given', e.target.value.replace(/\D/g, ''))}
+                                    error={errors.cash_given}
+                                />
+                                {changeDue !== null && (
+                                    <p
+                                        aria-live="polite"
+                                        className={cn('mt-3 rounded-xl px-3 py-2 text-sm font-semibold', changeDue >= 0 ? 'bg-primary-50 text-primary-800' : 'bg-danger-50 text-danger-700')}
+                                    >
+                                        {changeDue >= 0
+                                            ? `Monnaie à rendre : ${formatFCFA(changeDue)}`
+                                            : `Montant insuffisant : il manque ${formatFCFA(-changeDue)}`}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </Card>
+
+                    <Card>
+                        <Textarea
+                            id="client_note"
+                            label="Note pour le commerce (facultatif)"
+                            rows={2}
+                            maxLength={500}
+                            placeholder="Ex. : sans piment, bien cuit…"
+                            value={data.client_note}
+                            onChange={(e) => update('client_note', e.target.value)}
+                            error={errors.client_note}
+                        />
+                    </Card>
 
                     {cartError && (
-                        <div
-                            role="alert"
-                            className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
-                        >
+                        <div role="alert" className="rounded-2xl border border-danger-200 bg-danger-50 p-4 text-sm text-danger-800">
                             {cartError}{' '}
-                            <Link href={route('cart', { store: cart.store.id })} className="font-medium underline">
+                            <Link href={route('cart', { store: store.id })} className="font-semibold underline">
                                 Voir mon panier
                             </Link>
                         </div>
                     )}
 
-                    <FormErrors errors={cartError ? {} : errors} />
-
-                    {closed && !cartError && <StoreClosedAlert status={status} storeName={cart.store.name} />}
-
-                    {unavailableItems.length > 0 && !cartError && (
-                        <div role="alert" className="rounded-2xl border border-danger-200 bg-danger-50 p-4 text-sm text-danger-800">
-                            <p className="font-semibold">
-                                Plus disponible : {unavailableItems.map((item) => item.name).join(', ')}.
+                    {!isOpen && (
+                        <div role="status" className="flex items-start gap-3 rounded-2xl border border-accent-300 bg-accent-50 p-4 text-sm">
+                            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-accent-700" aria-hidden="true" />
+                            <p>
+                                <span className="font-semibold text-secondary-900">{statusLabel}</span> — votre panier est conservé : vous pourrez
+                                commander à la réouverture.
                             </p>
-                            <Link href={route('cart', { store: cart.store.id })} className="mt-1 inline-block font-semibold underline">
-                                Mettre à jour mon panier
-                            </Link>
                         </div>
                     )}
 
-                    <button
-                        type="submit"
-                        disabled={processing || closed || unavailableItems.length > 0}
-                        aria-busy={processing}
-                        className="w-full rounded-full bg-primary-600 py-3 font-semibold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50"
-                    >
-                        {processing ? (
-                            <span className="inline-flex items-center justify-center gap-2">
-                                <Spinner /> Envoi de la commande…
-                            </span>
-                        ) : (
-                            `Confirmer la commande · ${formatFCFA(total)}`
-                        )}
-                    </button>
+                    {unavailableItems.length > 0 && (
+                        <div role="alert" className="flex items-start gap-3 rounded-2xl border border-danger-200 bg-danger-50 p-4 text-sm text-danger-800">
+                            <CircleAlert className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+                            <p>
+                                <span className="font-semibold">Plus disponible : {unavailableItems.map((item) => item.name).join(', ')}.</span>{' '}
+                                <Link href={route('cart', { store: store.id })} className="font-semibold underline">
+                                    Mettre à jour mon panier
+                                </Link>
+                            </p>
+                        </div>
+                    )}
+
+                    {canOrder ? (
+                        <Button type="submit" size="lg" fullWidth loading={processing} disabled={blocked}>
+                            {!isOpen ? 'Commerce fermé' : `Commander · ${formatFCFA(total)}`}
+                        </Button>
+                    ) : (
+                        // Compte non validé : message à la place du bouton.
+                        <div role="status" className="flex items-start gap-3 rounded-2xl border border-accent-300 bg-accent-50 p-4 text-sm">
+                            <Hourglass className="mt-0.5 h-5 w-5 shrink-0 text-accent-700" aria-hidden="true" />
+                            <p className="text-gray-700">
+                                <span className="font-semibold text-secondary-900">Votre compte est en attente de validation.</span> Vous pourrez
+                                commander dès que l’équipe Gogab l’aura validé ; votre panier est conservé.{' '}
+                                <Link href={route('dashboard')} className="font-semibold text-secondary underline">
+                                    Suivre mon inscription
+                                </Link>
+                            </p>
+                        </div>
+                    )}
+                    <p className="text-center text-xs text-gray-500">
+                        Aucun paiement n’est effectué en ligne : seul votre choix est enregistré avec la commande.
+                    </p>
                 </div>
             </form>
         </PublicLayout>

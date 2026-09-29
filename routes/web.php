@@ -37,13 +37,18 @@ Route::get('/cart', fn (Request $request) => Inertia::render('Cart/Index', [
 // Visiteur qui veut commander : connexion puis retour sur ce panier.
 Route::get('/cart/{store}/login', [CheckoutController::class, 'login'])->middleware('guest')->name('cart.login');
 
+// Tunnel de commande : un checkout = le panier d'UN seul commerce. Un client en attente de
+// validation voit la page (avec un message à la place du bouton) mais ne peut pas envoyer.
+Route::get('/checkout/{store}', [CheckoutController::class, 'create'])
+    ->middleware(['auth', 'role:client'])
+    ->name('checkout');
+
 // Commande réservée aux clients dont le compte est validé
 // (un client en attente peut parcourir le catalogue, pas commander).
 Route::middleware(['auth', 'role:client', 'approved'])->group(function () {
-    // Un checkout = le panier d'UN seul commerce.
-    Route::get('/checkout/{store}', [CheckoutController::class, 'create'])->name('checkout');
     Route::get('/checkout', [CheckoutController::class, 'legacy']);
     Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
+    Route::get('/orders/{order}/confirmation', [OrderController::class, 'confirmation'])->name('orders.confirmation');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 });
 

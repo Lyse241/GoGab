@@ -326,6 +326,7 @@ class StoreOpeningHoursTest extends TestCase
         $client = User::factory()->create(['role' => 'client']);
 
         return $this->actingAs($client)->post('/orders', [
+            'store_id' => $store->id,
             'neighborhood_id' => Neighborhood::create(['name' => 'Glass', 'zone' => 'Centre'])->id,
             'address_landmarks' => 'Près de la pharmacie, portail bleu',
             'payment_method' => 'airtel_money',
@@ -340,7 +341,7 @@ class StoreOpeningHoursTest extends TestCase
         $this->at('2026-09-28 07:00');
 
         $this->placeOrder($store)
-            ->assertSessionHasErrors(['items' => 'Chez Maman Ngoye est fermé pour le moment (ouvre à 08h00). Votre panier est conservé : vous pourrez commander à la réouverture.']);
+            ->assertSessionHasErrors(['items' => 'Chez Maman Ngoye : Fermé · ouvre à 08h00. Votre panier est conservé : vous pourrez commander à la réouverture.']);
 
         $this->assertDatabaseCount('orders', 0);
     }

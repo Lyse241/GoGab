@@ -83,7 +83,7 @@ class DeliveryController extends Controller
             'number' => $order->reference,
             'status' => $order->status->value,
             'next_status' => $withClient ? $next?->value : null,
-            'created_at' => $order->created_at->format('d/m à H:i'),
+            'created_at' => $order->created_at->setTimezone(config('gogab.timezone'))->format('d/m à H\hi'),
             'store' => $order->store->name,
             'store_neighborhood' => $order->store->neighborhood?->name,
             'neighborhood' => $order->neighborhood->name,

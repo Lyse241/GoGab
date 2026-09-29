@@ -16,7 +16,23 @@ enum PaymentMethod: string
         return match ($this) {
             self::AirtelMoney => 'Airtel Money',
             self::MoovMoney => 'Moov Money',
-            self::Cash => 'Espèces à la livraison',
+            self::Cash => 'Paiement à la livraison',
         };
+    }
+
+    /**
+     * Consigne affichée au client lors du choix.
+     */
+    public function hint(): string
+    {
+        return match ($this) {
+            self::AirtelMoney, self::MoovMoney => 'Le paiement se fait à la livraison via le numéro communiqué par le livreur.',
+            self::Cash => 'En espèces, à la remise de la commande.',
+        };
+    }
+
+    public function isMobileMoney(): bool
+    {
+        return $this !== self::Cash;
     }
 }
