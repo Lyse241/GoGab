@@ -121,12 +121,9 @@ Route::middleware(['auth', 'role:business', 'approved'])->prefix('business')->na
         Route::delete('/{product}', 'destroy')->middleware('can:delete,product')->name('destroy');
     });
 
-    // Section du prochain prompt : état vide en attendant.
-    Route::get('/orders', fn () => Inertia::render('ComingSoon', [
-        'title' => 'Commandes',
-        'description' => 'Les commandes de vos clients s’afficheront ici.',
-        'back' => 'business.dashboard',
-    ]))->name('orders.index');
+    // Commandes reçues, en direct (actions : PUT /orders/{order}/status → OrderWorkflow).
+    Route::get('/orders', [Business\OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [Business\OrderController::class, 'show'])->middleware('can:view,order')->name('orders.show');
 });
 
 Route::middleware(['auth', 'role:admin', 'approved'])->prefix('admin')->name('admin.')->group(function () {

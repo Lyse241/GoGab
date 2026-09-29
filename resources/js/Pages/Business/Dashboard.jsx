@@ -4,7 +4,7 @@ import Card, { CardHeader } from '@/Components/UI/Card';
 import Switch from '@/Components/UI/Switch';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import { cn } from '@/utils/cn';
-import { imageUrl } from '@/utils/format';
+import { formatFCFA, imageUrl } from '@/utils/format';
 import { Head, router, usePage } from '@inertiajs/react';
 import { Clock, Package, Pencil, ReceiptText, Store } from 'lucide-react';
 import { useState } from 'react';
@@ -28,7 +28,26 @@ function todayHours(today) {
  * Le commerce n'est réellement ouvert que si l'interrupteur est sur « ouvert » ET qu'on est
  * dans ses horaires : l'état affiché vient du serveur (heure de Libreville).
  */
-export default function Dashboard({ store, today, productsCount }) {
+function Stat({ label, value, href, highlight = false }) {
+    const content = (
+        <>
+            <span className={cn('block text-2xl font-bold', highlight ? 'text-primary-700' : 'text-secondary-900')}>{value}</span>
+            <span className="mt-0.5 block text-sm text-gray-600">{label}</span>
+        </>
+    );
+
+    return href ? (
+        <Card href={href} padding="sm" className={cn('px-4', highlight && 'ring-2 ring-primary-200')}>
+            {content}
+        </Card>
+    ) : (
+        <Card padding="sm" className="px-4">
+            {content}
+        </Card>
+    );
+}
+
+export default function Dashboard({ store, today, productsCount, stats }) {
     const { auth } = usePage().props;
     const [saving, setSaving] = useState(false);
 
@@ -75,6 +94,19 @@ export default function Dashboard({ store, today, productsCount }) {
                     </div>
                 </Card>
 
+                {/* Compteurs du jour (heure de Libreville) */}
+                <section aria-labelledby="stats-title">
+                    <h2 id="stats-title" className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-500">
+                        Aujourd’hui
+                    </h2>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        <Stat label="Nouvelles commandes" value={stats.new} href={route('business.orders.index')} highlight={stats.new > 0} />
+                        <Stat label="En préparation" value={stats.preparing} href={route('business.orders.index', { tab: 'preparing' })} />
+                        <Stat label="Livrées" value={stats.delivered} href={route('business.orders.index', { tab: 'finished' })} />
+                        <Stat label="Chiffre d’affaires" value={formatFCFA(stats.revenue)} />
+                    </div>
+                </section>
+
                 {/* Interrupteur ouvert / fermé */}
                 <Card
                     className={cn(
@@ -118,7 +150,7 @@ export default function Dashboard({ store, today, productsCount }) {
                         <ReceiptText className="h-6 w-6 text-primary-600" aria-hidden="true" />
                         <span>
                             <span className="block font-semibold text-secondary-900">Commandes</span>
-                            <span className="block text-sm text-gray-500">Bientôt disponible</span>
+                            <span className="block text-sm text-gray-500">Recevoir et traiter les commandes</span>
                         </span>
                     </Card>
                     <Card href={route('business.products.index')} className="flex items-center gap-3">

@@ -66,6 +66,18 @@ class NotificationTest extends TestCase
         $this->assertSame(['/orders/5?tab=suivi', 'https://exemple.ga/page'], $urls);
     }
 
+    public function test_links_built_on_another_host_than_app_url_stay_relative(): void
+    {
+        config(['app.url' => 'http://localhost']);
+        // Requête servie sur 127.0.0.1 (php artisan serve) : route() utilise cet hôte.
+        \Illuminate\Support\Facades\URL::forceRootUrl('http://127.0.0.1:8000');
+
+        Notifier::send($this->user, 'A', 'B', route('orders.show', 12));
+
+        $this->assertSame('/orders/12', $this->user->notifications()->sole()->data['url']);
+        \Illuminate\Support\Facades\URL::forceRootUrl(null);
+    }
+
     public function test_notifier_rejects_an_unknown_type(): void
     {
         Notification::fake();

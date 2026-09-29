@@ -90,14 +90,11 @@ class StoreProfileTest extends TestCase
                 ->has('today.label'));
     }
 
-    public function test_placeholder_sections_are_reachable(): void
+    public function test_dashboard_shows_today_counters(): void
     {
-        foreach (['/business/orders' => 'Commandes'] as $url => $title) {
-            $this->actingAs($this->owner)
-                ->get($url)
-                ->assertOk()
-                ->assertInertia(fn (Assert $page) => $page->component('ComingSoon')->where('title', $title));
-        }
+        $this->actingAs($this->owner)
+            ->get('/business')
+            ->assertInertia(fn (Assert $page) => $page->where('stats', ['new' => 0, 'preparing' => 0, 'delivered' => 0, 'revenue' => 0]));
     }
 
     public function test_open_switch_is_saved_and_combined_with_opening_hours(): void

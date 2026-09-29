@@ -54,7 +54,7 @@ export const navigation = {
     ],
     business: [
         { route: 'business.dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
-        { route: 'business.orders.index', label: 'Commandes', icon: ReceiptText, active: ['business.orders.*'] },
+        { route: 'business.orders.index', label: 'Commandes', icon: ReceiptText, active: ['business.orders.*'], badge: 'new_orders' },
         { route: 'business.products.index', label: 'Produits', icon: Package, active: ['business.products.*'] },
         { route: 'business.store.edit', label: 'Mon commerce', shortLabel: 'Commerce', icon: Store, active: ['business.store.*'] },
         { route: 'profile.edit', label: 'Mon profil', icon: UserRound },

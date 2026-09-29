@@ -92,6 +92,9 @@ export function ToastProvider({ initialFlash, children }) {
     );
 
     const initialShown = useRef(false);
+    // Dernier objet flash affiché : lors d'un rechargement partiel (usePoll, only: […]), Inertia
+    // conserve les props non demandées, dont le flash précédent — à ne pas réafficher.
+    const lastFlash = useRef(initialFlash);
 
     useEffect(() => {
         if (!initialShown.current) {
@@ -99,7 +102,15 @@ export function ToastProvider({ initialFlash, children }) {
             showFlash(initialFlash);
         }
 
-        return router.on('success', (event) => showFlash(event.detail.page.props.flash));
+        return router.on('success', (event) => {
+            const flash = event.detail.page.props.flash;
+            if (flash === lastFlash.current) {
+                return;
+            }
+
+            lastFlash.current = flash;
+            showFlash(flash);
+        });
     }, [initialFlash, showFlash]);
 
     const value = useMemo(

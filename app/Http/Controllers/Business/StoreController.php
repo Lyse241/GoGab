@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Business;
 
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Business\UpdateStoreRequest;
 use App\Models\Category;
@@ -42,7 +43,29 @@ class StoreController extends Controller
                 ...StoreHours::schedule($store)[$today - 1],
             ],
             'productsCount' => $store->products()->count(),
+            'stats' => $this->todayStats($store),
         ]);
+    }
+
+    /**
+     * Compteurs du jour (journée de Libreville) : commandes reçues, en préparation (en ce moment),
+     * livrées, chiffre d'affaires du jour (sous-total des commandes livrées, hors frais de livraison).
+     *
+     * @return array{new: int, preparing: int, delivered: int, revenue: float}
+     */
+    private function todayStats(Store $store): array
+    {
+        $start = StoreHours::now()->startOfDay()->utc();
+        $end = $start->addDay();
+        $orders = fn () => $store->orders();
+        $deliveredToday = fn () => $orders()->where('status', OrderStatus::Delivered)->whereBetween('updated_at', [$start, $end]);
+
+        return [
+            'new' => $orders()->whereBetween('created_at', [$start, $end])->count(),
+            'preparing' => $orders()->whereIn('status', [OrderStatus::Accepted, OrderStatus::Preparing])->count(),
+            'delivered' => $deliveredToday()->count(),
+            'revenue' => (float) $deliveredToday()->sum('subtotal'),
+        ];
     }
 
     /**

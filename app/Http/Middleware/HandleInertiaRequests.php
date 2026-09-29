@@ -71,9 +71,14 @@ class HandleInertiaRequests extends Middleware
             // Avertissements de la modération : le plus ancien non lu doit être accusé (« J'ai compris »).
             'moderation' => fn () => $user ? $this->moderation($user) : null,
             // Compteurs affichés dans le menu de l'espace connecté (clé `badge` de Layouts/navigation.js).
-            'badges' => fn () => $user?->isAdmin() && $user->isApproved()
-                ? ['pending_accounts' => User::awaitingValidation()->count()]
-                : [],
+            'badges' => fn () => match (true) {
+                $user?->isAdmin() && $user->isApproved() => ['pending_accounts' => User::awaitingValidation()->count()],
+                // Entreprise : nouvelles commandes à accepter ou refuser.
+                $user?->isBusiness() && $user->isApproved() && $user->store !== null => [
+                    'new_orders' => $user->store->orders()->where('status', OrderStatus::Pending)->count(),
+                ],
+                default => [],
+            },
             // Sélecteur de quartier du header public.
             'neighborhoods' => fn () => Neighborhood::orderBy('name')->get(['id', 'name', 'zone']),
             // Footer public : moyens de paiement et catégories les plus fournies.

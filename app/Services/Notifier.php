@@ -66,9 +66,14 @@ class Notifier
         }
 
         $parts = parse_url($url);
-        $appHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+        // Hôtes de l'application : APP_URL, et l'hôte de la requête en cours (route() l'utilise :
+        // 127.0.0.1 en local, domaine réel en production même si APP_URL diffère).
+        $internalHosts = array_filter([
+            parse_url((string) config('app.url'), PHP_URL_HOST),
+            parse_url(url('/'), PHP_URL_HOST),
+        ]);
 
-        if (! isset($parts['host']) || $parts['host'] === $appHost) {
+        if (! isset($parts['host']) || in_array($parts['host'], $internalHosts, true)) {
             $path = '/'.ltrim($parts['path'] ?? '', '/');
 
             return $path

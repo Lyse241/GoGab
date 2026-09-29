@@ -100,7 +100,7 @@ class OrderWorkflow
             $order->store->owner,
             "Nouvelle commande {$order->reference}",
             "{$order->client->name} a commandé pour ".$this->money($order->total_price).'. Acceptez-la ou refusez-la.',
-            route('business.orders.index'),
+            route('business.orders.show', $order),
         );
 
         return $order;
@@ -288,7 +288,7 @@ class OrderWorkflow
         $business = $order->store->owner;
         $courier = $order->delivery;
         $clientUrl = route('orders.show', $order);
-        $businessUrl = route('business.orders.index');
+        $businessUrl = route('business.orders.show', $order);
         $courierUrl = route('delivery.dashboard');
         $reason = $note ? " Motif : {$note}" : '';
 
