@@ -80,10 +80,15 @@ Route::get('/documents/{document}', [DocumentController::class, 'show'])
 Route::permanentRedirect('/delivery/dashboard', '/delivery');
 Route::permanentRedirect('/admin/dashboard', '/admin');
 
+// Changement de statut d'une commande, pour tous les rôles : OrderWorkflow vérifie le rôle,
+// le statut et que l'acteur est concerné (sinon message d'erreur, commande inchangée).
+Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus'])
+    ->middleware(['auth', 'approved'])
+    ->name('orders.status.update');
+
 Route::middleware(['auth', 'role:delivery', 'approved'])->group(function () {
     Route::get('/delivery', [DeliveryController::class, 'dashboard'])->name('delivery.dashboard');
     Route::post('/delivery/orders/{order}/accept', [DeliveryController::class, 'accept'])->name('delivery.orders.accept');
-    Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.status.update');
 });
 
 // Espace entreprise : un compte entreprise validé gère son propre commerce (StorePolicy::manage).

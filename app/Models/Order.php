@@ -11,14 +11,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Order extends Model
 {
     /**
-     * Progression du livreur (flux v1 simplifié, sans étape commerce) : statut actuel => statut suivant.
-     */
-    public const NEXT_STATUS = [
-        OrderStatus::Accepted->value => OrderStatus::Delivering->value,
-        OrderStatus::Delivering->value => OrderStatus::Delivered->value,
-    ];
-
-    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
@@ -71,7 +63,8 @@ class Order extends Model
     }
 
     /**
-     * Ajoute une entrée à l'historique des statuts.
+     * Ajoute une entrée à l'historique des statuts. Réservé à App\Services\OrderWorkflow :
+     * le statut d'une commande ne change jamais ailleurs.
      */
     public function recordStatus(OrderStatus $status, ?User $changedBy = null, ?string $note = null): OrderStatusHistory
     {

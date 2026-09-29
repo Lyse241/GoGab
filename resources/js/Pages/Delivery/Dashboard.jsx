@@ -7,10 +7,11 @@ import { useState } from 'react';
 
 const REFRESH_INTERVAL = 30000; // 30 s : nouvelles commandes sans recharger la page
 
-// Libellé du bouton selon l'étape suivante.
+// Libellé du bouton selon l'étape suivante (proposée par le serveur, OrderWorkflow).
 const nextStepLabels = {
-    en_livraison: 'Démarrer la livraison',
-    livree: 'Marquer comme livrée',
+    en_livraison: 'J’ai récupéré la commande',
+    arrive: 'Je suis arrivé chez le client',
+    livree: 'Commande remise au client',
 };
 
 function OrderCard({ order, children }) {
@@ -28,7 +29,7 @@ function OrderCard({ order, children }) {
                 </p>
             </div>
 
-            {order.status !== 'en_attente' && (
+            {order.status !== 'en_recherche_livreur' && (
                 <StatusBadge
                     status={order.status}
                     className="mt-2 self-start"
@@ -38,7 +39,10 @@ function OrderCard({ order, children }) {
             <dl className="mt-3 space-y-2 text-sm">
                 <div>
                     <dt className="text-gray-500">Récupérer chez</dt>
-                    <dd className="font-medium text-gray-900">{order.store ?? '—'}</dd>
+                    <dd className="font-medium text-gray-900">
+                        {order.store ?? '—'}
+                        {order.store_neighborhood && <span className="font-normal text-gray-500"> · {order.store_neighborhood}</span>}
+                    </dd>
                 </div>
                 <div>
                     <dt className="text-gray-500">Livrer à</dt>
@@ -131,7 +135,7 @@ function EmptyState({ children }) {
     );
 }
 
-export default function Dashboard({ available, mine, deliveredToday }) {
+export default function Dashboard({ available, mine, deliveredToday, zone, isAvailable }) {
     // Identifiant de la commande en cours d'envoi (bloque les doubles clics).
     const [busyId, setBusyId] = useState(null);
 
@@ -202,7 +206,7 @@ export default function Dashboard({ available, mine, deliveredToday }) {
                 <section>
                     <div className="mb-3 flex items-center justify-between gap-2">
                         <h3 className="text-lg font-semibold text-secondary">
-                            Commandes disponibles ({available.length})
+                            Courses à prendre{zone ? ` · zone ${zone}` : ''} ({available.length})
                         </h3>
                         <button
                             type="button"
@@ -218,8 +222,11 @@ export default function Dashboard({ available, mine, deliveredToday }) {
                     </div>
                     {available.length === 0 ? (
                         <EmptyState>
-                            Aucune commande en attente pour le moment. La liste
-                            se met à jour automatiquement.
+                            {!zone
+                                ? 'Aucune zone de livraison n’est rattachée à votre profil : contactez l’équipe Gogab.'
+                                : !isAvailable
+                                  ? 'Vous êtes indisponible : aucune course ne vous est proposée.'
+                                  : `Aucune course à prendre dans la zone ${zone} pour le moment. La liste se met à jour automatiquement.`}
                         </EmptyState>
                     ) : (
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

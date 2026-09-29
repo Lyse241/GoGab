@@ -7,9 +7,9 @@ use App\Enums\PaymentMethod;
 use App\Http\Requests\StoreOrderRequest;
 use App\Models\Order;
 use App\Models\Product;
+use App\Services\OrderWorkflow;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -17,9 +17,9 @@ use Inertia\Response;
 class OrderController extends Controller
 {
     /**
-     * Crée la commande et ses lignes à partir du panier envoyé par le client.
+     * Crée la commande et ses lignes à partir du panier envoyé par le client (prix relus en base).
      */
-    public function store(StoreOrderRequest $request): RedirectResponse
+    public function store(StoreOrderRequest $request, OrderWorkflow $workflow): RedirectResponse
     {
         $lines = collect($request->validated('items'));
         $products = Product::whereIn('id', $lines->pluck('product_id'))->get()->keyBy('id');
@@ -35,26 +35,18 @@ class OrderController extends Controller
         $deliveryFee = 0; // Frais de livraison pas encore définis.
         $paymentMethod = PaymentMethod::from($request->validated('payment_method'));
 
-        $order = DB::transaction(function () use ($request, $products, $items, $subtotal, $deliveryFee, $paymentMethod) {
-            $order = Order::create([
-                'store_id' => $products->first()->store_id, // une seule boutique (vérifié par StoreOrderRequest)
-                'client_id' => $request->user()->id,
-                'neighborhood_id' => $request->validated('neighborhood_id'),
-                'address_landmarks' => trim($request->validated('address_landmarks')),
-                'subtotal' => $subtotal,
-                'delivery_fee' => $deliveryFee,
-                'total_price' => $subtotal + $deliveryFee,
-                'payment_method' => $paymentMethod,
-                'cash_given' => $paymentMethod === PaymentMethod::Cash ? $request->validated('cash_given') : null,
-                'client_note' => $request->validated('client_note'),
-                'status' => OrderStatus::Pending,
-            ]);
-
-            $order->items()->createMany($items->all());
-            $order->recordStatus(OrderStatus::Pending, $request->user());
-
-            return $order;
-        });
+        // Statut initial, historique et notification de l'entreprise : OrderWorkflow.
+        $order = $workflow->place($request->user(), [
+            'store_id' => $products->first()->store_id, // une seule boutique (vérifié par StoreOrderRequest)
+            'neighborhood_id' => $request->validated('neighborhood_id'),
+            'address_landmarks' => trim($request->validated('address_landmarks')),
+            'subtotal' => $subtotal,
+            'delivery_fee' => $deliveryFee,
+            'total_price' => $subtotal + $deliveryFee,
+            'payment_method' => $paymentMethod,
+            'cash_given' => $paymentMethod === PaymentMethod::Cash ? $request->validated('cash_given') : null,
+            'client_note' => $request->validated('client_note'),
+        ], $items);
 
         return redirect()
             ->route('orders.show', $order)
@@ -62,37 +54,24 @@ class OrderController extends Controller
     }
 
     /**
-     * Le livreur assigné fait avancer le statut d'une étape :
-     * acceptee → en_livraison → livree.
+     * Changement de statut, pour tous les rôles (entreprise, livreur, client, admin).
+     * Les règles (rôle, statut, acteur concerné, motif) sont dans OrderWorkflow : une transition
+     * interdite lève OrderTransitionException, rendue en message d'erreur.
      */
-    public function updateStatus(Request $request, Order $order): RedirectResponse
+    public function updateStatus(Request $request, Order $order, OrderWorkflow $workflow): RedirectResponse
     {
-        abort_unless($order->delivery()->is($request->user()), 403, "Cette commande n'est pas assignée à votre compte.");
-
         $validated = $request->validate([
-            'status' => ['required', Rule::in(Order::NEXT_STATUS)],
+            'status' => ['required', Rule::enum(OrderStatus::class)],
+            'note' => ['nullable', 'string', 'max:500'],
+        ], [
+            'status.required' => 'Indiquez le nouveau statut.',
+            'note.max' => '500 caractères maximum.',
         ]);
 
-        // Le statut demandé doit être exactement l'étape suivante (évite les sauts
-        // d'étape et les doubles clics).
-        $current = $order->status;
+        $to = OrderStatus::from($validated['status']);
+        $workflow->transition($order, $to, $request->user(), $validated['note'] ?? null);
 
-        if ((Order::NEXT_STATUS[$current->value] ?? null) !== $validated['status']) {
-            return back()->with('error', "La commande {$order->reference} est déjà au statut « {$current->label()} ».");
-        }
-
-        $updated = Order::whereKey($order->id)
-            ->where('status', $current)
-            ->update(['status' => $validated['status'], 'updated_at' => now()]);
-
-        if (! $updated) {
-            return back()->with('error', "Le statut de la commande {$order->reference} a changé entre-temps. Actualisez la page.");
-        }
-
-        $next = OrderStatus::from($validated['status']);
-        $order->recordStatus($next, $request->user());
-
-        return back()->with('success', "Commande {$order->reference} : {$next->label()}.");
+        return back()->with('success', "Commande {$order->reference} : {$to->label()}.");
     }
 
     /**
@@ -100,8 +79,8 @@ class OrderController extends Controller
      */
     public function show(Request $request, Order $order): Response
     {
-        // Un client ne peut voir que ses propres commandes.
-        abort_unless($order->client()->is($request->user()), 404);
+        // OrderPolicy::view ; 404 plutôt que 403 : on ne révèle pas l'existence de la commande.
+        abort_unless($request->user()->can('view', $order), 404);
 
         $order->load(['store:id,name', 'neighborhood:id,name', 'items.product:id,name,image']);
 

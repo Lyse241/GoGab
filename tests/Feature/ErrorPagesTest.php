@@ -2,8 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Neighborhood;
-use App\Models\Order;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -37,20 +35,14 @@ class ErrorPagesTest extends TestCase
 
     public function test_forbidden_action_shows_the_403_page(): void
     {
-        // Un livreur tente de modifier une commande assignée à un autre livreur.
-        $order = Order::create([
-            'store_id' => Store::factory()->create()->id,
-            'client_id' => User::factory()->create(['role' => 'client'])->id,
-            'delivery_id' => User::factory()->create(['role' => 'delivery'])->id,
-            'neighborhood_id' => Neighborhood::create(['name' => 'Glass'])->id,
-            'total_price' => 1000,
-            'address_landmarks' => 'Près de la pharmacie',
-            'payment_method' => 'cash',
-            'status' => 'acceptee',
-        ]);
+        // Une entreprise tente d'ouvrir le produit d'une autre entreprise (ProductPolicy).
+        $product = Store::factory()->create(['owner_id' => User::factory()->create(['role' => 'business'])->id])
+            ->products()->create(['name' => 'Poulet', 'price' => 4500]);
+        $intruder = User::factory()->create(['role' => 'business']);
+        Store::factory()->create(['owner_id' => $intruder->id]);
 
-        $this->actingAs(User::factory()->create(['role' => 'delivery']))
-            ->put("/orders/{$order->id}/status", ['status' => 'en_livraison'])
+        $this->actingAs($intruder)
+            ->get("/business/products/{$product->id}/edit")
             ->assertForbidden()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Error')

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\OrderStatus;
 use App\Models\Order;
+use App\Services\OrderWorkflow;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -11,30 +13,43 @@ use Inertia\Response;
 
 class DeliveryController extends Controller
 {
+    /** Statuts d'une course en cours pour le livreur assigné. */
+    private const IN_PROGRESS = [OrderStatus::CourierAssigned, OrderStatus::Delivering, OrderStatus::Arrived];
+
+    public function __construct(private readonly OrderWorkflow $workflow) {}
+
     /**
-     * Tableau de bord livreur : commandes disponibles + livraisons en cours.
+     * Tableau de bord livreur : annonces de sa zone (recherche de livreur) + ses courses en cours.
      */
     public function dashboard(Request $request): Response
     {
-        $user = $request->user();
-        $relations = ['store:id,name', 'neighborhood:id,name', 'client:id,name,phone', 'items.product:id,name'];
+        $user = $request->user()->load('deliveryProfile.baseNeighborhood');
+        $zone = $user->deliveryProfile?->baseNeighborhood?->zone;
+        $isAvailable = (bool) $user->deliveryProfile?->is_available;
+        $relations = ['store:id,name,neighborhood_id', 'store.neighborhood:id,name,zone', 'neighborhood:id,name', 'client:id,name,phone', 'items.product:id,name'];
 
-        $available = Order::with($relations)
-            ->where('status', OrderStatus::Pending)
-            ->whereNull('delivery_id')
-            ->oldest()
-            ->get();
+        // Annonces : commerces de la même zone que le livreur (pas de GPS), s'il est disponible.
+        $available = $zone && $isAvailable
+            ? Order::with($relations)
+                ->where('status', OrderStatus::SearchingCourier)
+                ->whereNull('delivery_id')
+                ->whereHas('store.neighborhood', fn (Builder $query) => $query->where('zone', $zone))
+                ->oldest()
+                ->get()
+            : collect();
 
         $mine = Order::with($relations)
             ->where('delivery_id', $user->id)
-            ->whereIn('status', array_keys(Order::NEXT_STATUS))
+            ->whereIn('status', self::IN_PROGRESS)
             ->oldest()
             ->get();
 
         return Inertia::render('Delivery/Dashboard', [
-            // Le téléphone du client n'est visible qu'une fois la commande acceptée.
-            'available' => $available->map(fn (Order $order) => $this->present($order, withClient: false)),
-            'mine' => $mine->map(fn (Order $order) => $this->present($order, withClient: true)),
+            // Le téléphone du client n'est visible qu'une fois la course acceptée.
+            'available' => $available->map(fn (Order $order) => $this->present($order, $user, withClient: false)),
+            'mine' => $mine->map(fn (Order $order) => $this->present($order, $user, withClient: true)),
+            'zone' => $zone,
+            'isAvailable' => $isAvailable,
             'deliveredToday' => $user->deliveries()
                 ->where('status', OrderStatus::Delivered)
                 ->whereDate('updated_at', today())
@@ -43,28 +58,13 @@ class DeliveryController extends Controller
     }
 
     /**
-     * Le livreur connecté prend en charge une commande disponible.
+     * Le livreur prend une course annoncée dans sa zone (un seul livreur : OrderWorkflow).
      */
     public function accept(Request $request, Order $order): RedirectResponse
     {
-        // Mise à jour conditionnelle : si deux livreurs cliquent en même temps,
-        // un seul UPDATE trouve encore la commande libre.
-        $taken = Order::whereKey($order->id)
-            ->where('status', OrderStatus::Pending)
-            ->whereNull('delivery_id')
-            ->update([
-                'delivery_id' => $request->user()->id,
-                'status' => OrderStatus::Accepted,
-                'updated_at' => now(),
-            ]);
+        $this->workflow->transition($order, OrderStatus::CourierAssigned, $request->user());
 
-        if (! $taken) {
-            return back()->with('error', "La commande {$order->reference} a déjà été prise par un autre livreur.");
-        }
-
-        $order->recordStatus(OrderStatus::Accepted, $request->user());
-
-        return back()->with('success', "Commande {$order->reference} acceptée. Direction la boutique !");
+        return back()->with('success', "Course {$order->reference} acceptée. Direction le commerce !");
     }
 
     /**
@@ -72,15 +72,20 @@ class DeliveryController extends Controller
      *
      * @return array<string, mixed>
      */
-    private function present(Order $order, bool $withClient): array
+    private function present(Order $order, $courier, bool $withClient): array
     {
+        // Étape suivante proposée au livreur (hors annulation, réservée à l'admin).
+        $next = collect($this->workflow->allowedTransitions($order, $courier))
+            ->first(fn (OrderStatus $status) => $status !== OrderStatus::Cancelled);
+
         return [
             'id' => $order->id,
             'number' => $order->reference,
             'status' => $order->status->value,
-            'next_status' => Order::NEXT_STATUS[$order->status->value] ?? null,
+            'next_status' => $withClient ? $next?->value : null,
             'created_at' => $order->created_at->format('d/m à H:i'),
             'store' => $order->store->name,
+            'store_neighborhood' => $order->store->neighborhood?->name,
             'neighborhood' => $order->neighborhood->name,
             'address_landmarks' => $order->address_landmarks,
             'payment_method_label' => $order->payment_method->label(),

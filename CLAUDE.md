@@ -67,7 +67,18 @@ Branches :
 - `refusee` — l’entreprise refuse la commande
 - `annulee` — annulation (client / règles métier à préciser à l’implémentation)
 
-État actuel du code : `orders.status` est un `string(30)` casté en `App\Enums\OrderStatus` (10 valeurs, `label()`, `color()` pour le badge React `StatusBadge`, `isFinal()`). Chaque changement est tracé dans `order_status_histories` via `Order::recordStatus()`. **Le flux effectivement codé reste celui de la v1** (`Order::NEXT_STATUS`) : le livreur accepte une commande `en_attente` → `acceptee` → `en_livraison` → `livree`. Préparation, recherche livreur, assignation, arrivée, refus et annulation ne sont pas encore câblés.
+État actuel du code : `orders.status` est un `string(30)` casté en `App\Enums\OrderStatus` (10 valeurs, `label()`, `color()` pour le badge React `StatusBadge`, `isFinal()`). 
+
+**Moteur : `App\Services\OrderWorkflow` — SEUL endroit où le statut d’une commande change** (aucune écriture de statut ailleurs ; `Order::recordStatus()` n’est appelé que par lui).
+- `place(User $client, array $attributes, iterable $items)` : création au statut `en_attente` (client validé), lignes, historique, notification « Nouvelle commande » à l’entreprise. `OrderController@store` calcule les prix puis délègue.
+- `transition(Order $order, OrderStatus $to, User $actor, ?string $note)` : table `OrderWorkflow::TRANSITIONS` (statut de départ → statut d’arrivée → rôles) ; acteur validé et concerné (client = sa commande ; entreprise = propriétaire du commerce ; livreur = pour `livreur_assigne`, livreur disponible dont le quartier de rattachement est dans la zone du commerce, qui devient `delivery_id` ; ensuite uniquement le livreur assigné ; admin = toujours) ; motif obligatoire pour `refusee` (entreprise) et `annulee` (admin), copié dans `orders.cancel_reason`. Commande relue et verrouillée dans une transaction, mise à jour conditionnelle (`where status = départ`, et `delivery_id is null` pour la prise de course) : un seul livreur peut prendre une course, un double clic échoue proprement. Historique + notifications (`Notifier`) à chaque étape.
+- Transitions : `en_attente` → `acceptee` | `refusee` (entreprise), → `annulee` (client ou admin) ; `acceptee` → `en_preparation` (entreprise) ; `en_preparation` → `en_recherche_livreur` (entreprise, annonce) ; `en_recherche_livreur` → `livreur_assigne` (livreur de la zone) ; `livreur_assigne` → `en_livraison` → `arrive` → `livree` (livreur assigné) ; `annulee` par l’admin depuis tout statut non final.
+- Notifications : nouvelle commande → entreprise ; acceptée / refusée (avec motif) / en préparation → client ; annonce → livreurs validés, disponibles, de la zone (`couriersForZone()`) + client ; livreur assigné, commande récupérée, livrée → client et entreprise ; « Votre livreur est arrivé » → client ; annulée → parties concernées sauf l’auteur.
+- Refus : `App\Exceptions\OrderTransitionException` (message français précis ; rendu = retour avec toast d’erreur, ou 422 JSON), commande inchangée. `allowedTransitions($order, $actor)` pour l’interface ; `courierServesStore()`.
+- HTTP : `PUT /orders/{order}/status` (`orders.status.update`, tous rôles connectés et validés, champs `status`, `note`) ; `POST /delivery/orders/{order}/accept` (prise de course). **`OrderPolicy::view`** : client = ses commandes, entreprise = son commerce, livreur = ses courses + annonces de sa zone, admin = toutes.
+- Tableau de bord livreur : annonces `en_recherche_livreur` de sa zone (vide s’il est indisponible ou sans zone), courses en cours avec l’étape suivante proposée par le workflow.
+- Attention démo : les commerces seedés sans propriétaire (`owner_id` null) ne peuvent pas accepter de commande (seule « Chez Maman Ngoye » a une entreprise).
+- Tests : `tests/Feature/Orders/` (`OrderWorkflowTest`, `OrderPolicyTest`, trait `BuildsOrders`), `DeliveryTest`.
 
 Zones (sans GPS) : `neighborhoods.zone` ∈ `Nord`, `Centre`, `Est`, `Sud` (`Neighborhood::ZONES`). Les « livreurs autour » d’un commerce = livreurs dont `delivery_profiles.base_neighborhood_id` est dans la même zone que `stores.neighborhood_id`.
 
@@ -239,7 +250,6 @@ Auth Breeze, profil, catalogue, panier (pages), commandes, livreur, admin, rôle
 - Espace entreprise : gestion des produits (prompt 15) et des commandes reçues
 - Gestion admin des commandes (annuler / relancer celles d’un compte bloqué) : prompt dédié
 - Upload et vérification des documents (table prête, pas d’écran)
-- Câblage du cycle de commande complet (étapes commerce, recherche livreur par zone, refus / annulation) ; frais de livraison
-- Policies, pages rangées par rôle (`Public`, `Client`, `Business`)
-- Déclencheurs de notifications métier (commande acceptée, compte validé…) : l’infrastructure existe, aucun envoi n’est encore branché
+- Interfaces du cycle de commande : écran « Commandes » de l’entreprise (accepter, refuser, préparer, publier l’annonce), suivi client, annulation par le client et l’admin (le moteur `OrderWorkflow` et la route `orders.status.update` sont prêts) ; frais de livraison
+- Pages client rangées sous `Pages/Client`
 - Activation du commerce (`is_active = true`) à la validation d’une entreprise par l’admin : à faire avec l’écran de validation
