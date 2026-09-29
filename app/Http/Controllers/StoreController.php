@@ -56,8 +56,12 @@ class StoreController extends Controller
     {
         abort_unless($store->isVisible(), 404);
 
+        // Menu par section (ordre alphabétique, produits sans section en dernier). Les produits
+        // indisponibles restent affichés (grisés, non commandables) : le client sait qu'ils existent.
         $store->load(['category:id,name', 'openingHours', 'products' => fn ($query) => $query
-            ->select(['id', 'store_id', 'name', 'description', 'price', 'image'])
+            ->select(['id', 'store_id', 'menu_section', 'name', 'description', 'price', 'image', 'is_available'])
+            ->orderByRaw('menu_section is null')
+            ->orderBy('menu_section')
             ->orderBy('name'),
         ]);
 
@@ -72,7 +76,7 @@ class StoreController extends Controller
     }
 
     /**
-     * État d'ouverture en JSON (vérification légère du panier et du checkout).
+     * État d'ouverture et produits indisponibles en JSON (vérification légère du panier et du checkout).
      */
     public function status(Store $store): JsonResponse
     {
@@ -81,6 +85,8 @@ class StoreController extends Controller
         return response()->json([
             'store_id' => $store->id,
             ...$store->load('openingHours')->openingStatus(),
+            // Pour signaler dans le panier un article devenu indisponible depuis son ajout.
+            'unavailable_product_ids' => $store->products()->where('is_available', false)->pluck('id'),
         ]);
     }
 

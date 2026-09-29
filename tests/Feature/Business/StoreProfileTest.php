@@ -92,7 +92,7 @@ class StoreProfileTest extends TestCase
 
     public function test_placeholder_sections_are_reachable(): void
     {
-        foreach (['/business/orders' => 'Commandes', '/business/products' => 'Produits'] as $url => $title) {
+        foreach (['/business/orders' => 'Commandes'] as $url => $title) {
             $this->actingAs($this->owner)
                 ->get($url)
                 ->assertOk()

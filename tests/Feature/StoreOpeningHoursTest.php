@@ -228,6 +228,7 @@ class StoreOpeningHoursTest extends TestCase
                 'is_open_now' => false,
                 'status_label' => 'Fermé · ouvre à 08h00',
                 'status_detail' => 'ouvre à 08h00',
+                'unavailable_product_ids' => [],
             ]);
     }
 

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Product;
 use App\Models\Store;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -77,5 +78,45 @@ class StoreCatalogTest extends TestCase
     public function test_unknown_store_returns_404(): void
     {
         $this->get('/stores/999')->assertNotFound();
+    }
+
+    public function test_store_page_groups_the_menu_by_section_and_flags_unavailable_products(): void
+    {
+        $store = Store::factory()->create();
+        Product::factory()->for($store)->inSection('Plats')->create(['name' => 'Poulet nyembwe']);
+        Product::factory()->for($store)->inSection('Boissons')->unavailable()->create(['name' => 'Jus de bissap']);
+        Product::factory()->for($store)->create(['name' => 'Alloco']);
+
+        $this->get("/stores/{$store->id}")
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Stores/Show')
+                ->has('products', 3)
+                // Sections par ordre alphabétique, sans section en dernier ; l'indisponible reste listé.
+                ->where('products.0.name', 'Jus de bissap')
+                ->where('products.0.menu_section', 'Boissons')
+                ->where('products.0.is_available', false)
+                ->where('products.1.name', 'Poulet nyembwe')
+                ->where('products.1.is_available', true)
+                ->where('products.2.name', 'Alloco')
+                ->where('products.2.menu_section', null));
+    }
+
+    public function test_status_endpoint_lists_unavailable_products_for_the_cart(): void
+    {
+        $store = Store::factory()->create();
+        $available = Product::factory()->for($store)->create();
+        $soldOut = Product::factory()->for($store)->unavailable()->create();
+        Product::factory()->unavailable()->create(); // autre commerce
+
+        $this->getJson("/stores/{$store->id}/status")
+            ->assertOk()
+            ->assertJsonPath('is_open_now', true)
+            ->assertJsonPath('unavailable_product_ids', [$soldOut->id]);
+
+        $soldOut->update(['is_available' => true]);
+        $available->update(['is_available' => false]);
+
+        $this->getJson("/stores/{$store->id}/status")->assertJsonPath('unavailable_product_ids', [$available->id]);
     }
 }

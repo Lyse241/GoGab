@@ -1,35 +1,82 @@
 import LazyImage from '@/Components/LazyImage';
 import { DAYS } from '@/Components/OpeningHoursEditor';
 import OpeningStatusBadge from '@/Components/OpeningStatusBadge';
+import Badge from '@/Components/UI/Badge';
 import ConfirmDialog from '@/Components/UI/ConfirmDialog';
 import QuantityStepper from '@/Components/QuantityStepper';
 import { useCart } from '@/Contexts/CartContext';
 import PublicLayout from '@/Layouts/PublicLayout';
+import { cartTotals } from '@/utils/cartTotals';
+import { cn } from '@/utils/cn';
 import { formatFCFA, imageUrl } from '@/utils/format';
 import { Head, Link } from '@inertiajs/react';
 import { Clock, Store as StoreIcon } from 'lucide-react';
 import { useState } from 'react';
 
-function ProductCard({ product, quantity, onAdd, onQuantityChange, canOrder }) {
+const OTHERS = 'Autres produits';
+
+/**
+ * Produits regroupés par section du menu (ordre reçu du serveur). Sans aucune section :
+ * un seul groupe sans titre.
+ */
+function groupBySection(products) {
+    if (!products.some((product) => product.menu_section)) {
+        return [[null, products]];
+    }
+
+    const groups = new Map();
+    products.forEach((product) => {
+        const key = product.menu_section ?? OTHERS;
+        groups.set(key, [...(groups.get(key) ?? []), product]);
+    });
+
+    return [...groups.entries()];
+}
+
+function ProductCard({ product, quantity, onAdd, onQuantityChange, onRemove, canOrder }) {
+    const available = product.is_available;
+
     return (
-        <article className="flex gap-4 rounded-xl bg-white p-3 shadow-sm ring-1 ring-gray-200">
-            <LazyImage
-                src={imageUrl(product.image)}
-                alt={product.name}
-                className="h-24 w-24 shrink-0 rounded-lg"
-            />
+        <article className={cn('flex gap-4 rounded-xl p-3 shadow-sm ring-1', available ? 'bg-white ring-gray-200' : 'bg-gray-50 ring-gray-100')}>
+            <div className="relative shrink-0 self-start">
+                <LazyImage
+                    src={imageUrl(product.image)}
+                    alt={product.name}
+                    className={cn('h-24 w-24 rounded-lg', !available && 'opacity-50 grayscale')}
+                />
+                {!available && (
+                    <Badge color="neutral" size="sm" className="absolute bottom-1.5 left-1/2 -translate-x-1/2 shadow-sm">
+                        Épuisé
+                    </Badge>
+                )}
+            </div>
             <div className="flex min-w-0 flex-1 flex-col">
-                <h3 className="font-semibold text-gray-900">{product.name}</h3>
+                <h3 className={cn('font-semibold', available ? 'text-gray-900' : 'text-gray-500')}>{product.name}</h3>
                 {product.description && (
                     <p className="mt-1 line-clamp-2 text-sm text-gray-500">
                         {product.description}
                     </p>
                 )}
                 <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-2">
-                    <p className="whitespace-nowrap font-bold text-primary-700">
+                    <p className={cn('whitespace-nowrap font-bold', available ? 'text-primary-700' : 'text-gray-400')}>
                         {formatFCFA(product.price)}
                     </p>
-                    {quantity > 0 && canOrder ? (
+                    {!available ? (
+                        quantity > 0 ? (
+                            // Déjà dans le panier avant de devenir indisponible : on propose de le retirer.
+                            <button
+                                type="button"
+                                onClick={onRemove}
+                                className="whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold text-danger-600 ring-1 ring-inset ring-danger-200 hover:bg-danger-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+                            >
+                                Retirer du panier
+                            </button>
+                        ) : (
+                            <span className="whitespace-nowrap rounded-full bg-gray-200 px-3 py-1.5 text-sm font-semibold text-gray-500">
+                                Indisponible
+                            </span>
+                        )
+                    ) : quantity > 0 && canOrder ? (
                         <QuantityStepper
                             quantity={quantity}
                             label={product.name}
@@ -42,7 +89,7 @@ function ProductCard({ product, quantity, onAdd, onQuantityChange, canOrder }) {
                             disabled={!canOrder}
                             className="whitespace-nowrap rounded-full bg-primary-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
                         >
-                            {canOrder ? 'Ajouter au panier' : 'Indisponible'}
+                            {canOrder ? 'Ajouter au panier' : 'Fermé'}
                         </button>
                     )}
                 </div>
@@ -71,6 +118,11 @@ export default function Show({ store, products }) {
     };
 
     const cartIsHere = cart.store?.id === store.id && cart.itemCount > 0;
+    // Barre du panier : sans les produits devenus indisponibles.
+    const { total, count } = cartTotals(
+        cart.items,
+        new Set(products.filter((product) => !product.is_available).map((product) => product.id)),
+    );
     // Calculé par le serveur à l'heure de Libreville.
     const canOrder = store.is_open_now;
 
@@ -162,22 +214,34 @@ export default function Show({ store, products }) {
                     Cette boutique n'a pas encore de produits.
                 </p>
             ) : (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {products.map((product) => (
-                        <ProductCard
-                            key={product.id}
-                            product={product}
-                            quantity={
-                                cart.store?.id === store.id
-                                    ? cart.quantityOf(product.id)
-                                    : 0
-                            }
-                            onAdd={() => handleAdd(product)}
-                            canOrder={canOrder}
-                            onQuantityChange={(quantity) =>
-                                cart.updateQuantity(product.id, quantity)
-                            }
-                        />
+                <div className="space-y-6">
+                    {groupBySection(products).map(([section, items]) => (
+                        <section key={section ?? 'menu'} aria-label={section ?? undefined}>
+                            {section && (
+                                <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-500">
+                                    {section}
+                                </h3>
+                            )}
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                {items.map((product) => (
+                                    <ProductCard
+                                        key={product.id}
+                                        product={product}
+                                        quantity={
+                                            cart.store?.id === store.id
+                                                ? cart.quantityOf(product.id)
+                                                : 0
+                                        }
+                                        onAdd={() => handleAdd(product)}
+                                        onRemove={() => cart.removeItem(product.id)}
+                                        canOrder={canOrder}
+                                        onQuantityChange={(quantity) =>
+                                            cart.updateQuantity(product.id, quantity)
+                                        }
+                                    />
+                                ))}
+                            </div>
+                        </section>
                     ))}
                 </div>
             )}
@@ -190,11 +254,11 @@ export default function Show({ store, products }) {
                         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-1 sm:px-6">
                             <div>
                                 <p className="text-sm text-gray-600">
-                                    Panier · {cart.itemCount} article
-                                    {cart.itemCount > 1 ? 's' : ''}
+                                    Panier · {count} article
+                                    {count > 1 ? 's' : ''}
                                 </p>
                                 <p className="text-lg font-bold text-gray-900">
-                                    {formatFCFA(cart.total)}
+                                    {formatFCFA(total)}
                                 </p>
                             </div>
                             <Link

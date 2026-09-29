@@ -3,9 +3,10 @@ import QuantityStepper from '@/Components/QuantityStepper';
 import { useCart } from '@/Contexts/CartContext';
 import useStoreStatus from '@/Hooks/useStoreStatus';
 import PublicLayout from '@/Layouts/PublicLayout';
+import { cartTotals } from '@/utils/cartTotals';
 import { formatFCFA, imageUrl } from '@/utils/format';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Clock, Hourglass } from 'lucide-react';
+import { CircleAlert, Clock, Hourglass } from 'lucide-react';
 
 function StoreClosedAlert({ status, storeName }) {
     return (
@@ -23,22 +24,26 @@ function StoreClosedAlert({ status, storeName }) {
     );
 }
 
-function CartLine({ item, onQuantityChange, onRemove }) {
+function CartLine({ item, unavailable = false, onQuantityChange, onRemove }) {
     return (
         <li className="flex gap-3 py-4">
             <LazyImage
                 src={imageUrl(item.image)}
                 alt={item.name}
-                className="h-20 w-20 shrink-0 rounded-lg"
+                className={`h-20 w-20 shrink-0 rounded-lg ${unavailable ? 'opacity-50 grayscale' : ''}`}
             />
 
             <div className="flex min-w-0 flex-1 flex-col">
                 <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                        <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                        <p className="text-sm text-gray-500">
-                            {formatFCFA(item.price)} l'unité
-                        </p>
+                        <h3 className={`font-semibold ${unavailable ? 'text-gray-500' : 'text-gray-900'}`}>{item.name}</h3>
+                        {unavailable ? (
+                            <p className="text-sm font-semibold text-danger-700">Plus disponible : retirez-le pour commander</p>
+                        ) : (
+                            <p className="text-sm text-gray-500">
+                                {formatFCFA(item.price)} l'unité
+                            </p>
+                        )}
                     </div>
                     <button
                         type="button"
@@ -64,12 +69,22 @@ function CartLine({ item, onQuantityChange, onRemove }) {
                 </div>
 
                 <div className="mt-auto flex items-center justify-between pt-2">
+                    {unavailable ? (
+                        <button
+                            type="button"
+                            onClick={onRemove}
+                            className="rounded-full px-3 py-1.5 text-sm font-semibold text-danger-600 ring-1 ring-inset ring-danger-200 hover:bg-danger-50"
+                        >
+                            Retirer
+                        </button>
+                    ) : (
                     <QuantityStepper
                         quantity={item.quantity}
                         label={item.name}
                         onChange={onQuantityChange}
                     />
-                    <p className="font-semibold text-gray-900">
+                    )}
+                    <p className={`font-semibold ${unavailable ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
                         {formatFCFA(item.price * item.quantity)}
                     </p>
                 </div>
@@ -83,6 +98,10 @@ export default function Index() {
     // Vérification légère auprès du serveur : le commerce peut avoir fermé depuis l'ajout au panier.
     const { status, loading } = useStoreStatus(cart.store?.id);
     const closed = status !== null && !status.is_open_now;
+    // Articles devenus indisponibles depuis leur ajout (l'entreprise a changé son catalogue).
+    const unavailableIds = new Set(status?.unavailable_product_ids ?? []);
+    const unavailableItems = cart.items.filter((item) => unavailableIds.has(item.product_id));
+    const { total, count } = cartTotals(cart.items, unavailableIds);
     // Client connecté mais pas encore validé : il peut préparer son panier, pas commander.
     const { user } = usePage().props.auth;
     const notApproved = Boolean(user) && user.account_status !== 'approved';
@@ -160,11 +179,32 @@ export default function Index() {
                     </div>
                 )}
 
+                {unavailableItems.length > 0 && (
+                    <div role="alert" className="mt-4 flex items-start gap-3 rounded-2xl border border-danger-200 bg-danger-50 p-4 text-sm">
+                        <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-danger-600" aria-hidden="true" />
+                        <div>
+                            <p className="font-semibold text-danger-800">
+                                {unavailableItems.length > 1
+                                    ? `${unavailableItems.length} articles ne sont plus disponibles`
+                                    : `« ${unavailableItems[0].name} » n’est plus disponible`}
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => unavailableItems.forEach((item) => cart.removeItem(item.product_id))}
+                                className="mt-1 font-semibold text-danger-700 underline"
+                            >
+                                {unavailableItems.length > 1 ? 'Les retirer du panier' : 'Le retirer du panier'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 <ul className="mt-4 divide-y divide-gray-200 rounded-xl bg-white px-4 shadow-sm ring-1 ring-gray-200">
                     {cart.items.map((item) => (
                         <CartLine
                             key={item.product_id}
                             item={item}
+                            unavailable={unavailableIds.has(item.product_id)}
                             onQuantityChange={(quantity) =>
                                 cart.updateQuantity(item.product_id, quantity)
                             }
@@ -176,22 +216,28 @@ export default function Index() {
                 <div className="mt-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
                     <div className="flex items-center justify-between">
                         <span className="text-gray-600">
-                            Total ({cart.itemCount} article
-                            {cart.itemCount > 1 ? 's' : ''})
+                            Total ({count} article
+                            {count > 1 ? 's' : ''})
                         </span>
                         <span className="text-xl font-bold text-gray-900">
-                            {formatFCFA(cart.total)}
+                            {formatFCFA(total)}
                         </span>
                     </div>
 
-                    {closed || loading || notApproved ? (
+                    {closed || loading || notApproved || unavailableItems.length > 0 ? (
                         <button
                             type="button"
                             disabled
                             aria-busy={loading || undefined}
                             className="mt-4 block w-full cursor-not-allowed rounded-full bg-gray-200 py-3 text-center font-semibold text-gray-500"
                         >
-                            {notApproved ? 'Compte en attente de validation' : loading ? 'Vérification des horaires…' : 'Commerce fermé'}
+                            {notApproved
+                                ? 'Compte en attente de validation'
+                                : loading
+                                  ? 'Vérification des horaires…'
+                                  : closed
+                                    ? 'Commerce fermé'
+                                    : 'Retirez les articles indisponibles'}
                         </button>
                     ) : (
                         <Link

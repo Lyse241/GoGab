@@ -5,6 +5,7 @@ import { useCart } from '@/Contexts/CartContext';
 import { useNeighborhood } from '@/Contexts/NeighborhoodContext';
 import useStoreStatus from '@/Hooks/useStoreStatus';
 import PublicLayout from '@/Layouts/PublicLayout';
+import { cartTotals } from '@/utils/cartTotals';
 import { formatFCFA } from '@/utils/format';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { Clock } from 'lucide-react';
@@ -65,7 +66,9 @@ function Section({ title, children }) {
     );
 }
 
-function OrderSummary({ cart }) {
+function OrderSummary({ cart, unavailableIds }) {
+    const { total } = cartTotals(cart.items, unavailableIds);
+
     return (
         <Section title="Récapitulatif">
             <p className="text-sm text-gray-600">
@@ -77,11 +80,11 @@ function OrderSummary({ cart }) {
                         key={item.product_id}
                         className="flex justify-between gap-3 py-2"
                     >
-                        <span className="min-w-0 text-gray-700">
+                        <span className={`min-w-0 ${unavailableIds.has(item.product_id) ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
                             <span className="font-medium">{item.quantity} ×</span>{' '}
                             {item.name}
                         </span>
-                        <span className="shrink-0 text-gray-900">
+                        <span className={`shrink-0 ${unavailableIds.has(item.product_id) ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
                             {formatFCFA(item.price * item.quantity)}
                         </span>
                     </li>
@@ -90,7 +93,7 @@ function OrderSummary({ cart }) {
             <div className="mt-2 flex items-center justify-between border-t border-gray-200 pt-3">
                 <span className="font-medium text-gray-700">Total</span>
                 <span className="text-lg font-bold text-gray-900">
-                    {formatFCFA(cart.total)}
+                    {formatFCFA(total)}
                 </span>
             </div>
             <Link
@@ -109,6 +112,10 @@ export default function Index({ neighborhoods, paymentMethods }) {
     // Le serveur refusera de toute façon une commande pour un commerce fermé.
     const { status } = useStoreStatus(cart.store?.id);
     const closed = status !== null && !status.is_open_now;
+    // Articles devenus indisponibles depuis leur ajout : à retirer depuis le panier.
+    const unavailableIds = new Set(status?.unavailable_product_ids ?? []);
+    const unavailableItems = cart.items.filter((item) => unavailableIds.has(item.product_id));
+    const { total } = cartTotals(cart.items, unavailableIds);
     // Quartier choisi dans le header, s'il est bien desservi.
     const { neighborhoodId } = useNeighborhood();
     const preselected = neighborhoods.some((n) => n.id === neighborhoodId) ? String(neighborhoodId) : '';
@@ -194,7 +201,7 @@ export default function Index({ neighborhoods, paymentMethods }) {
             >
                 {/* Sur mobile, le récapitulatif passe en premier. */}
                 <div className="lg:order-2 lg:sticky lg:top-20">
-                    <OrderSummary cart={cart} />
+                    <OrderSummary cart={cart} unavailableIds={unavailableIds} />
                 </div>
 
                 <div className="space-y-4 lg:order-1">
@@ -307,9 +314,20 @@ export default function Index({ neighborhoods, paymentMethods }) {
 
                     {closed && !cartError && <StoreClosedAlert status={status} storeName={cart.store.name} />}
 
+                    {unavailableItems.length > 0 && !cartError && (
+                        <div role="alert" className="rounded-2xl border border-danger-200 bg-danger-50 p-4 text-sm text-danger-800">
+                            <p className="font-semibold">
+                                Plus disponible : {unavailableItems.map((item) => item.name).join(', ')}.
+                            </p>
+                            <Link href={route('cart')} className="mt-1 inline-block font-semibold underline">
+                                Mettre à jour mon panier
+                            </Link>
+                        </div>
+                    )}
+
                     <button
                         type="submit"
-                        disabled={processing || closed}
+                        disabled={processing || closed || unavailableItems.length > 0}
                         aria-busy={processing}
                         className="w-full rounded-full bg-primary-600 py-3 font-semibold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50"
                     >
@@ -318,7 +336,7 @@ export default function Index({ neighborhoods, paymentMethods }) {
                                 <Spinner /> Envoi de la commande…
                             </span>
                         ) : (
-                            `Confirmer la commande · ${formatFCFA(cart.total)}`
+                            `Confirmer la commande · ${formatFCFA(total)}`
                         )}
                     </button>
                 </div>

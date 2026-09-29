@@ -18,6 +18,8 @@ import { useEffect, useState } from 'react';
 export default function Index({ categories, icons }) {
     const [editing, setEditing] = useState(null); // null = fermé, {} = création, catégorie = édition
     const [deleting, setDeleting] = useState(null);
+    // La catégorie reste affiché dans la fenêtre pendant son animation de fermeture.
+    const [confirmOpen, setConfirmOpen] = useState(false);
     const [deletingInProgress, setDeletingInProgress] = useState(false);
 
     const destroy = () => {
@@ -26,7 +28,7 @@ export default function Index({ categories, icons }) {
             onStart: () => setDeletingInProgress(true),
             onFinish: () => {
                 setDeletingInProgress(false);
-                setDeleting(null);
+                setConfirmOpen(false);
             },
         });
     };
@@ -85,7 +87,10 @@ export default function Index({ categories, icons }) {
                                             size="icon-sm"
                                             icon={Trash2}
                                             disabled={used}
-                                            onClick={() => setDeleting(category)}
+                                            onClick={() => {
+                                                setDeleting(category);
+                                                setConfirmOpen(true);
+                                            }}
                                             className="text-danger-600 hover:bg-danger-50"
                                             aria-label={`Supprimer ${category.name}`}
                                             title={used ? 'Utilisée par au moins un commerce : suppression impossible' : undefined}
@@ -105,8 +110,8 @@ export default function Index({ categories, icons }) {
             <CategoryForm category={editing} icons={icons} onClose={() => setEditing(null)} />
 
             <ConfirmDialog
-                open={deleting !== null}
-                onClose={() => setDeleting(null)}
+                open={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
                 onConfirm={destroy}
                 loading={deletingInProgress}
                 title={deleting ? `Supprimer « ${deleting.name} » ?` : ''}

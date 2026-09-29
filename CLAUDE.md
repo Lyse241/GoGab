@@ -144,11 +144,12 @@ Zones (sans GPS) : `neighborhoods.zone` ∈ `Nord`, `Centre`, `Est`, `Sud` (`Nei
 
 ## Espace entreprise
 
-- `/business` (`['auth', 'role:business', 'approved']`), `DashboardLayout`, menu : Tableau de bord, Commandes, Produits, Mon commerce, Mon profil. Commandes (`business.orders.index`) et Produits (`business.products.index`) : `Pages/ComingSoon` en attendant leurs prompts.
+- `/business` (`['auth', 'role:business', 'approved']`), `DashboardLayout`, menu : Tableau de bord, Commandes, Produits, Mon commerce, Mon profil. Commandes (`business.orders.index`) : `Pages/ComingSoon` en attendant son prompt.
+- Produits (`/business/products`, `Business\ProductController`, pages `Business/Products/Index` et `Business/Products/Form`) : liste groupée par `menu_section` (sections par ordre alphabétique, sans section en dernier sous « Autres produits »), recherche `q` (nom, description) et filtre `section` (`__none` = sans section) côté serveur, interrupteur de disponibilité (`PATCH /business/products/{product}/availability`, affichage optimiste), ajout / modification en page (`POST` multipart, photo 2 Mo dans `products`, `remove_image`), suppression avec `ConfirmDialog` (refusée si le produit figure dans des commandes : le rendre indisponible). **`ProductPolicy`** (`create`, `update`, `delete` : produit du commerce de l’entreprise validée) via `can:` sur les routes → 403 sur le produit d’une autre entreprise. `Business\ProductRequest` (prix en FCFA entiers, « 4 500 » accepté, section nettoyée avec majuscule initiale). Logique dans **`App\Services\ProductCatalogService`** (`create`, `update`, `setAvailability`, `delete`, `sections`).
 - `Business\StoreController` : le commerce est toujours celui de l’utilisateur connecté (`$user->store`, 404 s’il n’en a pas) et passe par **`StorePolicy::manage`** (entreprise validée propriétaire). Logique dans **`App\Services\StoreProfileService`** (`update`, `setOpen`).
 - Tableau de bord (`Business/Dashboard`) : bienvenue (couverture, logo), grand interrupteur « Commerce ouvert / fermé » (`PATCH /business/store/open`, `business.store.open`, met à jour `stores.is_open`), état du moment (`OpeningStatusBadge`, calculé serveur : ouvert seulement si interrupteur ouvert ET dans les horaires), horaires du jour, raccourcis.
 - « Mon commerce » (`GET /business/store` `business.store.edit`, `POST /business/store` `business.store.update` en multipart) : nom, catégorie, description, téléphone, quartier, repères, horaires (`OpeningHoursEditor`), logo (2 Mo, `stores/logos`) et couverture (4 Mo, 400 × 200 px minimum, `stores`) sur le disque public ; `remove_logo` / `remove_cover_image` pour retirer. `Business\UpdateStoreRequest`. Les nouvelles images sont écrites avant la transaction (effacées si échec), les anciennes supprimées après. Documents non modifiables ici.
-- Design system : `UI/Switch` (interrupteur accessible Headless UI, `size="lg"`, `loading`) ; `UI/FileUpload` accepte `onRemoveCurrent` (bouton « Retirer » sur le fichier déjà enregistré).
+- Design system : `UI/Switch` (interrupteur accessible Headless UI, `size` sm | md | lg, `reverse` = interrupteur avant le libellé, `loading`) ; `UI/FileUpload` accepte `onRemoveCurrent` (bouton « Retirer » sur le fichier déjà enregistré).
 - Démo : `entreprise@gogab.ga` gère « Chez Maman Ngoye » (adresse, description et horaires renseignés par `TestAccountsSeeder`).
 
 ## Modération des comptes
@@ -168,6 +169,7 @@ Zones (sans GPS) : `neighborhoods.zone` ∈ `Nord`, `Centre`, `Est`, `Sud` (`Nei
 - Règles : `App\Services\StoreHours` (`isOpenNow`, `currentSlot`, `nextOpeningAt`, `statusMessage`, `schedule`, `sync`, `everyDay`), exposées par `Store` (`isOpenNow()`, `nextOpeningAt()`, `statusMessage()`, `openingStatus()`, scope `openNow()`).
 - Validation des horaires : trait `App\Http\Requests\Concerns\ValidatesOpeningHours` (champ `opening_hours`, 7 lignes) — à réutiliser pour l’inscription entreprise et « Mon commerce ».
 - Front : `Components/OpeningHoursEditor` (+ `defaultOpeningHours`, `validateOpeningHours`), `Components/OpeningStatusBadge`, hook `Hooks/useStoreStatus` (GET `/stores/{store}/status`).
+- Produits indisponibles (`products.is_available = false`) : la page commerce (`Stores/Show`, menu groupé par `menu_section`, sans section en dernier) les affiche grisés avec « Épuisé » et sans bouton d’ajout (« Retirer du panier » s’ils y sont déjà). `GET /stores/{store}/status` renvoie `unavailable_product_ids` : le panier et le checkout signalent l’article (ligne barrée), proposent de le retirer et bloquent la commande. Les totaux affichés (panier, checkout, barre de la page commerce) l’excluent : `utils/cartTotals.js` (`cartTotals(items, unavailableIds)` → `{ total, count }`). Refus serveur dans `StoreOrderRequest` dans tous les cas.
 - Commande bloquée si fermé : boutons d’ajout désactivés + bandeau (page commerce), alerte + bouton désactivé (panier, checkout), refus serveur dans `StoreOrderRequest`.
 - Tests : `StoreFactory` crée par défaut des horaires 24 h/24 (états `withHours()`, `withoutHours()`, `temporarilyClosed()`) ; figer l’heure avec `Carbon::setTestNow` + `CarbonImmutable::setTestNow`.
 
@@ -192,7 +194,7 @@ Zones (sans GPS) : `neighborhoods.zone` ∈ `Nord`, `Centre`, `Est`, `Sud` (`Nei
 
 `User`, `DeliveryProfile`, `Document`, `Category`, `Store`, `Product`, `Neighborhood`, `Order`, `OrderItem`, `OrderStatusHistory`
 
-Factories : `UserFactory` (approved par défaut), `CategoryFactory`, `StoreFactory` (état `inCategory('Nom')`).
+Factories : `UserFactory` (approved par défaut), `CategoryFactory`, `StoreFactory` (état `inCategory('Nom')`), `ProductFactory` (états `unavailable()`, `inSection('Plats')`).
 
 ### Enums (`app/Enums`, chacun avec `label()` en français)
 
@@ -228,7 +230,6 @@ Auth Breeze, profil, catalogue, panier (pages), commandes, livreur, admin, rôle
 - Gestion admin des commandes (annuler / relancer celles d’un compte bloqué) : prompt dédié
 - Upload et vérification des documents (table prête, pas d’écran)
 - Câblage du cycle de commande complet (étapes commerce, recherche livreur par zone, refus / annulation) ; frais de livraison
-- Filtrage du catalogue public sur `stores.is_active` / `is_open` et `products.is_available` (colonnes prêtes, pas encore utilisées côté catalogue)
 - Policies, pages rangées par rôle (`Public`, `Client`, `Business`)
 - Déclencheurs de notifications métier (commande acceptée, compte validé…) : l’infrastructure existe, aucun envoi n’est encore branché
 - Activation du commerce (`is_active = true`) à la validation d’une entreprise par l’admin : à faire avec l’écran de validation

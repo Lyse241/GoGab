@@ -15,19 +15,19 @@ class ProductSeeder extends Seeder
     {
         $catalog = [
             'Chez Maman Ngoye' => [
-                ['Poulet nyembwe', 'Poulet mijoté à la sauce de noix de palme, servi avec riz ou bâtons de manioc.', 4500],
-                ['Feuilles de manioc au poisson fumé', "Feuilles de manioc pilées cuites à l'huile de palme avec poisson fumé.", 3500],
-                ['Bouillon de viande', 'Bouillon de bœuf épicé aux légumes du marché.', 3000],
-                ['Riz sauce arachide', "Riz blanc et sauce à la pâte d'arachide avec morceaux de poulet.", 2500],
-                ['Brochettes de bœuf (x5)', 'Cinq brochettes grillées, oignons et piment.', 2000],
+                ['Poulet nyembwe', 'Poulet mijoté à la sauce de noix de palme, servi avec riz ou bâtons de manioc.', 4500, 'Plats'],
+                ['Feuilles de manioc au poisson fumé', "Feuilles de manioc pilées cuites à l'huile de palme avec poisson fumé.", 3500, 'Plats'],
+                ['Bouillon de viande', 'Bouillon de bœuf épicé aux légumes du marché.', 3000, 'Plats'],
+                ['Riz sauce arachide', "Riz blanc et sauce à la pâte d'arachide avec morceaux de poulet.", 2500, 'Plats'],
+                ['Brochettes de bœuf (x5)', 'Cinq brochettes grillées, oignons et piment.', 2000, 'Grillades'],
             ],
             'Le Braisé du Bord de Mer' => [
-                ['Capitaine braisé', 'Capitaine entier braisé, accompagné de banane plantain et piment.', 7500],
-                ['Crevettes grillées', "Crevettes grillées à l'ail, sauce maison.", 8000],
-                ['Poulet DG', 'Poulet sauté aux plantains mûrs, carottes et haricots verts.', 6500],
-                ['Bar braisé et bâtons de manioc', 'Bar braisé servi avec trois bâtons de manioc.', 5500],
-                ['Alloco', 'Portion de bananes plantains frites.', 1000],
-                ['Jus de bissap (50 cl)', "Jus d'hibiscus maison, servi frais.", 1000],
+                ['Capitaine braisé', 'Capitaine entier braisé, accompagné de banane plantain et piment.', 7500, 'Braisés'],
+                ['Crevettes grillées', "Crevettes grillées à l'ail, sauce maison.", 8000, 'Braisés'],
+                ['Poulet DG', 'Poulet sauté aux plantains mûrs, carottes et haricots verts.', 6500, 'Plats'],
+                ['Bar braisé et bâtons de manioc', 'Bar braisé servi avec trois bâtons de manioc.', 5500, 'Braisés'],
+                ['Alloco', 'Portion de bananes plantains frites.', 1000, 'Accompagnements'],
+                ['Jus de bissap (50 cl)', "Jus d'hibiscus maison, servi frais.", 1000, 'Boissons'],
             ],
             'Pharmacie du Bon Secours' => [
                 ['Paracétamol 500 mg (boîte de 16)', 'Antalgique et antipyrétique. Lire la notice avant usage.', 1000],
@@ -71,10 +71,13 @@ class ProductSeeder extends Seeder
         foreach ($catalog as $storeName => $products) {
             $store = Store::where('name', $storeName)->firstOrFail();
 
-            foreach ($products as [$name, $description, $price]) {
+            foreach ($products as $product) {
+                [$name, $description, $price] = $product;
+
                 $store->products()->updateOrCreate(
                     ['name' => $name],
                     [
+                        'menu_section' => $product[3] ?? null,
                         'description' => $description,
                         'price' => $price,
                         'image' => StoreSeeder::placeholder($storeName.' '.$name, 400, 400),

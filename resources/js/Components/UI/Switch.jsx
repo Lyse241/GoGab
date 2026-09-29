@@ -3,8 +3,9 @@ import { cn } from '@/utils/cn';
 import { Field, Label, Description, Switch as HeadlessSwitch } from '@headlessui/react';
 
 const sizes = {
-    md: { track: 'h-7 w-12', thumb: 'h-5 w-5', on: 'translate-x-6' },
-    lg: { track: 'h-9 w-16', thumb: 'h-7 w-7', on: 'translate-x-8' },
+    sm: { track: 'h-6 w-10', thumb: 'h-4 w-4', on: 'translate-x-4', spinner: 'h-3 w-3' },
+    md: { track: 'h-7 w-12', thumb: 'h-5 w-5', on: 'translate-x-5', spinner: 'h-3.5 w-3.5' },
+    lg: { track: 'h-9 w-16', thumb: 'h-7 w-7', on: 'translate-x-7', spinner: 'h-4 w-4' },
 };
 
 /**
@@ -12,20 +13,26 @@ const sizes = {
  *
  * - checked / onChange(bool) : état contrôlé
  * - label, description : texte associé (cliquable)
+ * - reverse : interrupteur à gauche du libellé (listes compactes)
  * - loading : spinner dans le bouton, changement bloqué
- * - size : md | lg (grand interrupteur bien visible)
+ * - size : sm | md | lg (grand interrupteur bien visible)
  */
-export default function Switch({ checked, onChange, label, description, loading = false, disabled = false, size = 'md', className }) {
+export default function Switch({ checked, onChange, label, description, reverse = false, loading = false, disabled = false, size = 'md', className }) {
     const s = sizes[size];
 
+    const text = (label || description) && (
+        <span className="min-w-0">
+            {label && <Label className="block cursor-pointer font-semibold text-secondary-900">{label}</Label>}
+            {description && <Description className="mt-0.5 block text-sm text-gray-600">{description}</Description>}
+        </span>
+    );
+
     return (
-        <Field disabled={disabled || loading} className={cn('flex items-center justify-between gap-4', className)}>
-            {(label || description) && (
-                <span className="min-w-0">
-                    {label && <Label className="block cursor-pointer font-semibold text-secondary-900">{label}</Label>}
-                    {description && <Description className="mt-0.5 block text-sm text-gray-600">{description}</Description>}
-                </span>
-            )}
+        <Field
+            disabled={disabled || loading}
+            className={cn('flex items-center', reverse ? 'gap-2' : 'justify-between gap-4', className)}
+        >
+            {!reverse && text}
             <HeadlessSwitch
                 checked={checked}
                 onChange={onChange}
@@ -46,9 +53,10 @@ export default function Switch({ checked, onChange, label, description, loading 
                         checked ? s.on : 'translate-x-0',
                     )}
                 >
-                    {loading && <Spinner className="h-3.5 w-3.5 text-gray-500" />}
+                    {loading && <Spinner className={cn(s.spinner, 'text-gray-500')} />}
                 </span>
             </HeadlessSwitch>
+            {reverse && text}
         </Field>
     );
 }

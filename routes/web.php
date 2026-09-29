@@ -86,14 +86,24 @@ Route::middleware(['auth', 'role:business', 'approved'])->prefix('business')->na
     // POST (et non PUT) : envoi de fichiers en multipart.
     Route::post('/store', [Business\StoreController::class, 'update'])->name('store.update');
 
-    // Sections des prochains prompts : état vide en attendant.
-    foreach (['orders' => ['Commandes', 'Les commandes de vos clients s’afficheront ici.'], 'products' => ['Produits', 'Vous pourrez bientôt gérer votre catalogue ici.']] as $section => [$title, $description]) {
-        Route::get("/{$section}", fn () => Inertia::render('ComingSoon', [
-            'title' => $title,
-            'description' => $description,
-            'back' => 'business.dashboard',
-        ]))->name("{$section}.index");
-    }
+    // Catalogue (ProductPolicy : uniquement les produits de son commerce).
+    Route::controller(Business\ProductController::class)->prefix('/products')->name('products.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->middleware('can:create,App\Models\Product')->name('store');
+        Route::get('/{product}/edit', 'edit')->middleware('can:update,product')->name('edit');
+        // POST (et non PUT) : envoi de photo en multipart.
+        Route::post('/{product}', 'update')->middleware('can:update,product')->name('update');
+        Route::patch('/{product}/availability', 'availability')->middleware('can:update,product')->name('availability');
+        Route::delete('/{product}', 'destroy')->middleware('can:delete,product')->name('destroy');
+    });
+
+    // Section du prochain prompt : état vide en attendant.
+    Route::get('/orders', fn () => Inertia::render('ComingSoon', [
+        'title' => 'Commandes',
+        'description' => 'Les commandes de vos clients s’afficheront ici.',
+        'back' => 'business.dashboard',
+    ]))->name('orders.index');
 });
 
 Route::middleware(['auth', 'role:admin', 'approved'])->prefix('admin')->name('admin.')->group(function () {
