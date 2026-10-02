@@ -286,6 +286,7 @@ class OrderWorkflow
         return User::query()
             ->where('role', Role::Delivery)
             ->where('account_status', 'approved')
+            ->whereNull('deleted_at')
             ->where(fn (Builder $query) => $query->whereNull('blocked_until')->orWhere('blocked_until', '<=', now()))
             ->whereHas('deliveryProfile', fn (Builder $query) => $query
                 ->where('is_available', true)

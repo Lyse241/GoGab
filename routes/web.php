@@ -196,6 +196,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    // Livreur, entreprise : renvoyer ou remplacer un document (POST : envoi de fichier).
+    Route::post('/profile/documents/{type}', [ProfileController::class, 'replaceDocument'])->name('profile.documents.replace');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 

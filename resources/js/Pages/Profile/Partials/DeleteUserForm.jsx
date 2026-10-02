@@ -1,95 +1,73 @@
 import Button from '@/Components/UI/Button';
-import Input from '@/Components/UI/Input';
+import Card, { CardHeader } from '@/Components/UI/Card';
 import Modal from '@/Components/UI/Modal';
+import PasswordInput from '@/Components/UI/PasswordInput';
 import { useForm } from '@inertiajs/react';
-import { useRef, useState } from 'react';
+import { Trash2 } from 'lucide-react';
+import { useState } from 'react';
 
-export default function DeleteUserForm({ className = '' }) {
-    const [confirmingUserDeletion, setConfirmingUserDeletion] = useState(false);
-    const passwordInput = useRef();
+/**
+ * Suppression du compte, confirmée par le mot de passe. Les données personnelles sont effacées ;
+ * les commandes passées restent dans l'historique des autres parties (sans votre nom).
+ */
+export default function DeleteUserForm() {
+    const [open, setOpen] = useState(false);
+    const { data, setData, delete: destroy, processing, reset, errors, clearErrors } = useForm({ password: '' });
 
-    const {
-        data,
-        setData,
-        delete: destroy,
-        processing,
-        reset,
-        errors,
-        clearErrors,
-    } = useForm({
-        password: '',
-    });
-
-    const confirmUserDeletion = () => {
-        setConfirmingUserDeletion(true);
-    };
-
-    const deleteUser = (e) => {
-        e.preventDefault();
-
-        destroy(route('profile.destroy'), {
-            preserveScroll: true,
-            onSuccess: () => closeModal(),
-            onError: () => passwordInput.current.focus(),
-            onFinish: () => reset(),
-        });
-    };
-
-    const closeModal = () => {
-        setConfirmingUserDeletion(false);
-
+    const close = () => {
+        if (processing) {
+            return;
+        }
+        setOpen(false);
         clearErrors();
         reset();
     };
 
+    const submit = (event) => {
+        event.preventDefault();
+        destroy(route('profile.destroy'), {
+            preserveScroll: true,
+            onError: () => document.getElementById('delete_password')?.focus(),
+        });
+    };
+
     return (
-        <section className={`space-y-6 ${className}`}>
-            <header>
-                <h2 className="text-lg font-medium text-gray-900">
-                    Supprimer mon compte
-                </h2>
-
-                <p className="mt-1 text-sm text-gray-600">
-                    La suppression de votre compte est définitive : toutes vos données seront effacées.
-                </p>
-            </header>
-
-            <Button variant="danger" onClick={confirmUserDeletion}>
+        <Card>
+            <CardHeader title="Supprimer mon compte" description="Vos informations personnelles et vos documents seront effacés. C’est définitif." />
+            <Button variant="danger" icon={Trash2} onClick={() => setOpen(true)}>
                 Supprimer mon compte
             </Button>
 
             <Modal
-                open={confirmingUserDeletion}
-                onClose={closeModal}
+                open={open}
+                onClose={close}
                 closeable={!processing}
-                title="Voulez-vous vraiment supprimer votre compte ?"
-                description="Toutes vos données seront définitivement effacées. Saisissez votre mot de passe pour confirmer."
+                size="sm"
+                title="Supprimer votre compte ?"
+                description="Vos commandes passées restent dans l’historique des commerces et des livreurs, sans votre nom ni votre téléphone. Impossible si une commande est en cours."
                 footer={
                     <>
-                        <Button variant="outline" onClick={closeModal} disabled={processing}>
+                        <Button variant="outline" onClick={close} disabled={processing}>
                             Annuler
                         </Button>
-                        <Button type="submit" form="delete-user-form" variant="danger" loading={processing}>
-                            Supprimer mon compte
+                        <Button type="submit" form="delete-account" variant="danger" icon={Trash2} loading={processing}>
+                            Supprimer définitivement
                         </Button>
                     </>
                 }
             >
-                <form id="delete-user-form" onSubmit={deleteUser}>
-                    <Input
-                        id="password"
-                        type="password"
-                        name="password"
+                <form id="delete-account" onSubmit={submit} noValidate>
+                    <PasswordInput
+                        id="delete_password"
                         label="Mot de passe"
-                        ref={passwordInput}
+                        required
+                        autoComplete="current-password"
                         value={data.password}
                         onChange={(e) => setData('password', e.target.value)}
                         error={errors.password}
-                        autoComplete="current-password"
-                        isFocused
                     />
                 </form>
             </Modal>
-        </section>
+        </Card>
     );
 }

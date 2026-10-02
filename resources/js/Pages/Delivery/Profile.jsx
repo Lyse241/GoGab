@@ -5,7 +5,7 @@ import Card, { CardHeader } from '@/Components/UI/Card';
 import StatusBadge from '@/Components/UI/StatusBadge';
 import DeliveryLayout from '@/Layouts/DeliveryLayout';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import { Bike, ExternalLink, FileText, MapPin, Pencil, Save, UserRound } from 'lucide-react';
+import { Bike, ExternalLink, FileText, MapPin, Pencil, Save, Upload, UserRound } from 'lucide-react';
 import { useMemo } from 'react';
 
 function Row({ label, children }) {
@@ -146,6 +146,9 @@ export default function Profile({ account, vehicle, baseNeighborhoodId, neighbor
                         </li>
                     ))}
                 </ul>
+                <Button href={route('profile.edit')} variant="outline" icon={Upload} fullWidth className="mt-3">
+                    Renvoyer ou remplacer un document
+                </Button>
             </Card>
         </DeliveryLayout>
     );

@@ -36,6 +36,7 @@ class User extends Authenticatable
         'approved_by',
         'blocked_until',
         'flagged_at',
+        'deleted_at',
         'password',
     ];
 
@@ -64,6 +65,7 @@ class User extends Authenticatable
             'approved_at' => 'datetime',
             'blocked_until' => 'datetime',
             'flagged_at' => 'datetime',
+            'deleted_at' => 'datetime',
         ];
     }
 
@@ -119,13 +121,30 @@ class User extends Authenticatable
     }
 
     /**
+     * Compte supprimé par son titulaire (anonymisé : App\Services\AccountDeletionService).
+     */
+    public function isDeleted(): bool
+    {
+        return $this->deleted_at !== null;
+    }
+
+    /**
+     * Comptes non supprimés.
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->whereNull('deleted_at');
+    }
+
+    /**
      * Comptes (client, livreur, entreprise) en attente de validation par un administrateur.
      */
     public function scopeAwaitingValidation(Builder $query): Builder
     {
         return $query
             ->whereIn('role', [Role::Client, Role::Delivery, Role::Business])
-            ->where('account_status', AccountStatus::Pending);
+            ->where('account_status', AccountStatus::Pending)
+            ->whereNull('deleted_at');
     }
 
     /**

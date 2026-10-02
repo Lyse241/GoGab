@@ -290,4 +290,68 @@ class AccountValidationService
             'warning',
         );
     }
+
+    // --- Documents depuis le profil (livreur, entreprise) ---
+
+    /**
+     * Remplace un document depuis « Mon profil ». Il repart en vérification ; le compte ne repasse
+     * en revalidation que si le document est obligatoire et que le compte était validé.
+     *
+     * @return bool true si le compte repasse en attente de validation
+     *
+     * @throws ValidationException document non modifiable, commande en cours
+     */
+    public function replaceDocument(User $account, DocumentType $type, UploadedFile $file): bool
+    {
+        if (! in_array($type, $this->resendableDocuments($account), true)) {
+            throw ValidationException::withMessages(['document' => 'Ce document ne concerne pas votre compte.']);
+        }
+
+        // Inscription refusée : la correction passe par la page dédiée (tout le dossier est revu).
+        if ($account->account_status === AccountStatus::Rejected) {
+            throw ValidationException::withMessages(['document' => 'Votre inscription a été refusée : renvoyez vos documents depuis la page « Corriger et renvoyer ».']);
+        }
+
+        $required = in_array($type, $this->requiredDocuments($account), true);
+        $revalidation = $required && $account->account_status === AccountStatus::Approved;
+
+        // Revalidation = accès suspendu jusqu'à la décision : pas au milieu d'une commande.
+        if ($revalidation && app(ModerationService::class)->activeOrders($account)->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'document' => 'Vous avez une commande en cours : remplacez ce document une fois qu’elle sera terminée (votre compte devra être revalidé).',
+            ]);
+        }
+
+        $stored = null;
+
+        try {
+            DB::transaction(function () use ($account, $type, $file, $revalidation, &$stored) {
+                $document = $this->documents->store($account, $file, $type);
+                $stored = $document->file_path;
+
+                if ($revalidation) {
+                    $account->update(['account_status' => AccountStatus::Pending]);
+                    // Plus d'annonces tant que le compte n'est pas revalidé.
+                    $account->deliveryProfile?->update(['is_available' => false]);
+                }
+
+                AccountDecision::record($account, AccountDecisionAction::DocumentReplaced, $account, $document, $revalidation ? 'Document obligatoire : compte à revalider.' : null);
+            });
+        } catch (Throwable $exception) {
+            $this->documents->deleteFiles($stored);
+
+            throw $exception;
+        }
+
+        Notifier::admins(
+            $revalidation ? 'Document à revalider' : 'Nouveau document à vérifier',
+            $revalidation
+                ? "{$account->name} ({$account->role->label()}) a remplacé « {$type->label()} » : le compte attend une nouvelle validation."
+                : "{$account->name} ({$account->role->label()}) a envoyé « {$type->label()} ».",
+            route('admin.accounts.show', $account),
+            $revalidation ? 'warning' : 'info',
+        );
+
+        return $revalidation;
+    }
 }

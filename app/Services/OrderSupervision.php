@@ -107,6 +107,7 @@ class OrderSupervision
             'available_couriers' => User::query()
                 ->where('role', Role::Delivery)
                 ->where('account_status', AccountStatus::Approved)
+                ->whereNull('deleted_at')
                 ->whereHas('deliveryProfile', fn (Builder $query) => $query->where('is_available', true))
                 ->count(),
             'active_stores' => Store::visible()->count(),

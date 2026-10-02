@@ -95,8 +95,10 @@ class AccountController extends Controller
         $flagged = (bool) ($filters['flagged'] ?? false);
 
         // Type, recherche et signalement s'appliquent aussi aux compteurs des onglets.
+        // Les comptes supprimés (anonymisés) n'apparaissent plus dans les listes.
         $base = fn (): Builder => User::query()
             ->whereIn('role', self::TYPES)
+            ->whereNull('deleted_at')
             ->when($type, fn (Builder $query) => $query->where('role', $type))
             ->when($search !== '', fn (Builder $query) => $this->search($query, $search))
             ->when($flagged, fn (Builder $query) => $query->whereNotNull('flagged_at'));
@@ -145,6 +147,7 @@ class AccountController extends Controller
             ],
             'flaggedCount' => User::query()
                 ->whereIn('role', self::TYPES)
+                ->whereNull('deleted_at')
                 ->when($type, fn (Builder $query) => $query->where('role', $type))
                 ->whereNotNull('flagged_at')
                 ->count(),

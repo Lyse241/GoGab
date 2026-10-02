@@ -52,7 +52,10 @@ class ReportService
             default => [],
         };
 
-        return collect($parties)->filter()->reject(fn (array $party) => $party['user']->is($reporter))->values();
+        return collect($parties)
+            ->filter()
+            ->reject(fn (array $party) => $party['user']->is($reporter) || $party['user']->isDeleted())
+            ->values();
     }
 
     /**

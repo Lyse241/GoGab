@@ -50,6 +50,7 @@ class Notifier
     {
         $admins = User::where('role', Role::Admin)
             ->where('account_status', AccountStatus::Approved)
+            ->whereNull('deleted_at')
             ->get();
 
         return self::send($admins, $title, $message, $url, $type);

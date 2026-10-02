@@ -1,112 +1,88 @@
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
-import { Transition } from '@headlessui/react';
-import { Link, useForm, usePage } from '@inertiajs/react';
+import NeighborhoodSelect from '@/Components/NeighborhoodSelect';
+import Button from '@/Components/UI/Button';
+import Card, { CardHeader } from '@/Components/UI/Card';
+import Input from '@/Components/UI/Input';
+import Textarea from '@/Components/UI/Textarea';
+import { focusFirstError } from '@/utils/focusFirstError';
+import { Link, useForm } from '@inertiajs/react';
+import { Save } from 'lucide-react';
 
-export default function UpdateProfileInformation({
-    mustVerifyEmail,
-    status,
-    className = '',
-}) {
-    const user = usePage().props.auth.user;
+/**
+ * Informations du compte : nom, téléphone, e-mail, quartier et repères (obligatoires pour un
+ * client : adresse de livraison préremplie au checkout).
+ */
+export default function UpdateProfileInformationForm({ profile, neighborhoods, mustVerifyEmail, status, emailVerified }) {
+    const { data, setData, patch, errors, processing, isDirty } = useForm({
+        name: profile.name ?? '',
+        phone: profile.phone ?? '',
+        email: profile.email ?? '',
+        neighborhood_id: profile.neighborhood_id ?? '',
+        address_landmarks: profile.address_landmarks ?? '',
+    });
 
-    const { data, setData, patch, errors, processing, recentlySuccessful } =
-        useForm({
-            name: user.name,
-            email: user.email,
-        });
-
-    const submit = (e) => {
-        e.preventDefault();
-
-        patch(route('profile.update'));
+    const submit = (event) => {
+        event.preventDefault();
+        patch(route('profile.update'), { preserveScroll: true, onError: focusFirstError });
     };
 
     return (
-        <section className={className}>
-            <header>
-                <h2 className="text-lg font-medium text-gray-900">
-                    Informations du profil
-                </h2>
-
-                <p className="mt-1 text-sm text-gray-600">
-                    Modifiez votre nom et votre adresse e-mail.
-                </p>
-            </header>
-
-            <form onSubmit={submit} className="mt-6 space-y-6">
-                <div>
-                    <InputLabel htmlFor="name" value="Nom" />
-
-                    <TextInput
-                        id="name"
-                        className="mt-1 block w-full"
-                        value={data.name}
-                        onChange={(e) => setData('name', e.target.value)}
+        <Card>
+            <CardHeader title="Mes informations" description="Elles sont visibles par les autres parties de vos commandes (prénom, téléphone)." />
+            <form onSubmit={submit} noValidate className="space-y-4">
+                <Input id="name" label="Nom complet" required autoComplete="name" value={data.name} onChange={(e) => setData('name', e.target.value)} error={errors.name} />
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <Input
+                        id="phone"
+                        type="tel"
+                        inputMode="tel"
+                        label="Téléphone"
                         required
-                        isFocused
-                        autoComplete="name"
+                        autoComplete="tel"
+                        placeholder="077 12 34 56"
+                        value={data.phone}
+                        onChange={(e) => setData('phone', e.target.value)}
+                        error={errors.phone}
                     />
-
-                    <InputError className="mt-2" message={errors.name} />
+                    <Input id="email" type="email" label="E-mail" required autoComplete="email" value={data.email} onChange={(e) => setData('email', e.target.value)} error={errors.email} />
                 </div>
 
-                <div>
-                    <InputLabel htmlFor="email" value="E-mail" />
-
-                    <TextInput
-                        id="email"
-                        type="email"
-                        className="mt-1 block w-full"
-                        value={data.email}
-                        onChange={(e) => setData('email', e.target.value)}
-                        required
-                        autoComplete="username"
-                    />
-
-                    <InputError className="mt-2" message={errors.email} />
-                </div>
-
-                {mustVerifyEmail && user.email_verified_at === null && (
-                    <div>
-                        <p className="mt-2 text-sm text-gray-800">
-                            Votre adresse e-mail n'est pas vérifiée.
-                            <Link
-                                href={route('verification.send')}
-                                method="post"
-                                as="button"
-                                className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                            >
-                                Cliquez ici pour renvoyer l'e-mail de vérification.
-                            </Link>
-                        </p>
-
-                        {status === 'verification-link-sent' && (
-                            <div className="mt-2 text-sm font-medium text-primary-700">
-                                Un nouveau lien de vérification vous a été envoyé par e-mail.
-                            </div>
-                        )}
-                    </div>
+                {mustVerifyEmail && !emailVerified && (
+                    <p className="rounded-xl bg-warning-50 px-3 py-2 text-sm text-warning-900">
+                        Votre adresse e-mail n’est pas vérifiée.{' '}
+                        <Link href={route('verification.send')} method="post" as="button" className="font-semibold underline">
+                            Renvoyer le lien de vérification
+                        </Link>
+                        {status === 'verification-link-sent' && <span className="mt-1 block font-medium text-success-800">Un nouveau lien vous a été envoyé.</span>}
+                    </p>
                 )}
 
-                <div className="flex items-center gap-4">
-                    <PrimaryButton processing={processing}>Enregistrer</PrimaryButton>
+                <NeighborhoodSelect
+                    id="neighborhood_id"
+                    label="Quartier"
+                    required={profile.address_required}
+                    placeholder={profile.address_required ? 'Choisissez votre quartier' : 'Aucun'}
+                    neighborhoods={neighborhoods}
+                    value={data.neighborhood_id ?? ''}
+                    onChange={(e) => setData('neighborhood_id', e.target.value)}
+                    error={errors.neighborhood_id}
+                    hint={profile.address_required ? 'Adresse de livraison proposée par défaut.' : undefined}
+                />
+                <Textarea
+                    id="address_landmarks"
+                    label="Adresse et repères"
+                    required={profile.address_required}
+                    rows={3}
+                    maxLength={500}
+                    placeholder="Ex. : après la pharmacie, portail bleu, 2e maison à gauche"
+                    value={data.address_landmarks ?? ''}
+                    onChange={(e) => setData('address_landmarks', e.target.value)}
+                    error={errors.address_landmarks}
+                />
 
-                    <Transition
-                        show={recentlySuccessful}
-                        enter="transition ease-in-out"
-                        enterFrom="opacity-0"
-                        leave="transition ease-in-out"
-                        leaveTo="opacity-0"
-                    >
-                        <p className="text-sm text-gray-600">
-                            Enregistré.
-                        </p>
-                    </Transition>
-                </div>
+                <Button type="submit" icon={Save} loading={processing} disabled={!isDirty}>
+                    Enregistrer
+                </Button>
             </form>
-        </section>
+        </Card>
     );
 }

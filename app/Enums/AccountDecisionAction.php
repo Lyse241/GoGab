@@ -13,6 +13,7 @@ enum AccountDecisionAction: string
     case AccountApproved = 'account_approved';
     case AccountRejected = 'account_rejected';
     case Resubmitted = 'resubmitted';
+    case DocumentReplaced = 'document_replaced';
 
     public function label(): string
     {
@@ -23,6 +24,7 @@ enum AccountDecisionAction: string
             self::AccountApproved => 'Compte validé',
             self::AccountRejected => 'Inscription refusée',
             self::Resubmitted => 'Dossier corrigé et renvoyé',
+            self::DocumentReplaced => 'Document remplacé depuis le profil',
         };
     }
 
@@ -32,7 +34,7 @@ enum AccountDecisionAction: string
     public function color(): string
     {
         return match ($this) {
-            self::Submitted, self::Resubmitted => 'sky',
+            self::Submitted, self::Resubmitted, self::DocumentReplaced => 'sky',
             self::DocumentApproved, self::AccountApproved => 'green',
             self::DocumentRejected, self::AccountRejected => 'red',
         };
