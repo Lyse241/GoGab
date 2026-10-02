@@ -50,7 +50,7 @@ class AdminTest extends TestCase
 
     // --- Tableau de bord ---
 
-    public function test_dashboard_shows_stats(): void
+    public function test_dashboard_shows_the_status_distribution(): void
     {
         $this->makeOrder('en_attente', 1000);
         $this->makeOrder('en_attente', 2000);
@@ -62,33 +62,11 @@ class AdminTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Dashboard')
                 ->where('stats.total_orders', 3)
-                ->where('stats.revenue', 8000)
-                ->where('stats.delivered_revenue', 5000)
                 // Les 10 statuts, même à zéro, dans l'ordre du cycle de vie.
-                ->has('stats.by_status', 10)
-                ->where('stats.by_status.0', ['value' => 'en_attente', 'label' => 'En attente', 'count' => 2])
-                ->where('stats.by_status.1', ['value' => 'acceptee', 'label' => 'Acceptée', 'count' => 0])
-                ->where('stats.by_status.8', ['value' => 'livree', 'label' => 'Livrée', 'count' => 1])
-                ->has('orders.data', 3)
-                ->where('orders.data.0.store', 'Chez Test'));
-    }
-
-    public function test_orders_can_be_filtered_by_status(): void
-    {
-        $this->makeOrder('en_attente', 1000);
-        $delivered = $this->makeOrder('livree', 5000);
-
-        $this->actingAs($this->admin)
-            ->get('/admin?status=livree')
-            ->assertInertia(fn (Assert $page) => $page
-                ->where('filters.status', 'livree')
-                ->has('orders.data', 1)
-                ->where('orders.data.0.id', $delivered->id)
-                ->where('stats.total_orders', 2)); // les stats restent globales
-
-        $this->actingAs($this->admin)
-            ->get('/admin?status=inconnu')
-            ->assertSessionHasErrors('status');
+                ->has('byStatus', 10)
+                ->where('byStatus.0', ['value' => 'en_attente', 'label' => 'En attente', 'count' => 2])
+                ->where('byStatus.1', ['value' => 'acceptee', 'label' => 'Acceptée', 'count' => 0])
+                ->where('byStatus.8', ['value' => 'livree', 'label' => 'Livrée', 'count' => 1]));
     }
 
     public function test_non_admins_cannot_access_admin_pages(): void

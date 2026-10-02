@@ -41,6 +41,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Commande bloquée en recherche de livreur
+    |--------------------------------------------------------------------------
+    |
+    | Au-delà de ce délai (en minutes) sans livreur depuis l'annonce, la commande
+    | est mise en évidence côté admin (App\Services\OrderSupervision) et peut être
+    | relancée.
+    |
+    */
+
+    'stuck_search_minutes' => (int) env('GOGAB_STUCK_SEARCH_MINUTES', 15),
+
+    /*
+    |--------------------------------------------------------------------------
     | Icônes des catégories
     |--------------------------------------------------------------------------
     |

@@ -175,12 +175,11 @@ Route::middleware(['auth', 'role:admin', 'approved'])->prefix('admin')->name('ad
     Route::resource('categories', Admin\CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('neighborhoods', Admin\NeighborhoodController::class)->only(['index', 'store', 'update']);
 
-    // Sections pas encore construites : état vide « Bientôt disponible ».
-    Route::get('/orders', fn () => Inertia::render('ComingSoon', [
-        'title' => 'Commandes',
-        'description' => 'La section « Commandes » arrive dans une prochaine version de l’espace administrateur.',
-        'back' => 'admin.dashboard',
-    ]))->name('orders.index');
+    // Supervision des commandes (annulation : PUT orders.status.update → OrderWorkflow).
+    Route::get('/orders', [Admin\OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/export', [Admin\OrderController::class, 'export'])->name('orders.export');
+    Route::get('/orders/{order}', [Admin\OrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders/{order}/relaunch', [Admin\OrderController::class, 'relaunch'])->name('orders.relaunch');
     Route::resource('stores', Admin\StoreController::class)->except('show');
     // Produits rattachés à une boutique : /admin/stores/{store}/products/create, /admin/products/{product}/edit…
     Route::resource('stores.products', Admin\ProductController::class)

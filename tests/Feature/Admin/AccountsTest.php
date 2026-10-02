@@ -168,20 +168,6 @@ class AccountsTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->has('accounts.data', 1)->where('accounts.data.0.name', 'Client Validé'));
     }
 
-    public function test_sections_not_built_yet_show_coming_soon(): void
-    {
-        $sections = [
-            '/admin/orders' => 'Commandes',
-        ];
-
-        foreach ($sections as $url => $title) {
-            $this->actingAs($this->admin)
-                ->get($url)
-                ->assertOk()
-                ->assertInertia(fn (Assert $page) => $page->component('ComingSoon')->where('title', $title));
-        }
-    }
-
     private function order(Store $store, array $attributes = []): Order
     {
         return Order::create([
