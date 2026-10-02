@@ -79,13 +79,15 @@ class OrderController extends Controller
         $validated = $request->validate([
             'status' => ['required', Rule::enum(OrderStatus::class)],
             'note' => ['nullable', 'string', 'max:500'],
+            // Remise d'une commande cash : case « Montant encaissé » cochée par le livreur.
+            'cash_collected' => ['sometimes', 'boolean'],
         ], [
             'status.required' => 'Indiquez le nouveau statut.',
             'note.max' => '500 caractères maximum.',
         ]);
 
         $to = OrderStatus::from($validated['status']);
-        $workflow->transition($order, $to, $request->user(), $validated['note'] ?? null);
+        $workflow->transition($order, $to, $request->user(), $validated['note'] ?? null, (bool) ($validated['cash_collected'] ?? false));
 
         return back()->with('success', "Commande {$order->reference} : {$to->label()}.");
     }

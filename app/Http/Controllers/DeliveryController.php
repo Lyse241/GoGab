@@ -5,22 +5,22 @@ namespace App\Http\Controllers;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Models\Order;
+use App\Models\User;
 use App\Services\CourierProfileService;
 use App\Services\OrderWorkflow;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Courses du livreur : offres de sa zone, prise de course, courses en cours.
+ * Courses du livreur : offres de sa zone, prise de course, course en cours, historique.
  * L'accueil et le profil sont dans App\Http\Controllers\Delivery.
  */
 class DeliveryController extends Controller
 {
-    private const RELATIONS = ['store:id,name,neighborhood_id', 'store.neighborhood:id,name,zone', 'neighborhood:id,name', 'client:id,name,phone', 'items.product:id,name'];
-
     public function __construct(private readonly OrderWorkflow $workflow) {}
 
     /**
@@ -82,16 +82,56 @@ class DeliveryController extends Controller
     }
 
     /**
-     * Courses en cours du livreur, avec l'étape suivante proposée par le workflow.
+     * Course en cours (une seule à la fois) : étapes guidées, commerce, client, articles,
+     * encaissement. Sans course active : état vide qui renvoie vers les offres.
      */
     public function current(Request $request, CourierProfileService $courier): Response
     {
         $user = $request->user();
+        $order = $courier->activeOrders($user)->first()?->load([
+            'store:id,name,phone,neighborhood_id,address_landmarks',
+            'store.neighborhood:id,name',
+            'neighborhood:id,name',
+            'client:id,name,phone',
+            'items.product:id,name',
+        ]);
 
         return Inertia::render('Delivery/Current', [
-            'orders' => $courier->activeOrders($user)
-                ->load(self::RELATIONS)
-                ->map(fn (Order $order) => $this->present($order, $user, withClient: true)),
+            'order' => $order ? $this->presentCurrent($order, $user) : null,
+        ]);
+    }
+
+    /**
+     * Historique : courses livrées (les plus récentes d'abord) et gains du jour, de la semaine
+     * et du mois (journée de Libreville).
+     */
+    public function history(Request $request, CourierProfileService $courier): Response
+    {
+        $user = $request->user();
+        $timezone = config('gogab.timezone');
+
+        $deliveries = Order::query()
+            ->where('delivery_id', $user->id)
+            ->where('status', OrderStatus::Delivered)
+            ->with(['store:id,name', 'neighborhood:id,name'])
+            ->latest('updated_at')
+            ->latest('id')
+            ->paginate(20)
+            ->withQueryString()
+            ->through(fn (Order $order) => [
+                'id' => $order->id,
+                'number' => $order->reference,
+                'date' => $order->updated_at->setTimezone($timezone)->format('d/m/Y'),
+                'time' => $order->updated_at->setTimezone($timezone)->format('H\hi'),
+                'store' => $order->store?->name,
+                'neighborhood' => $order->neighborhood?->name,
+                'earning' => $order->delivery_fee,
+                'payment_method_label' => $order->payment_method->label(),
+            ]);
+
+        return Inertia::render('Delivery/History', [
+            'deliveries' => $deliveries,
+            'earnings' => $courier->earnings($user),
         ]);
     }
 
@@ -106,11 +146,12 @@ class DeliveryController extends Controller
     }
 
     /**
-     * Données d'une commande pour l'affichage livreur.
+     * Écran de course : étape, action suivante (OrderWorkflow), commerce, client, articles,
+     * encaissement (cash : montant remis par le client et monnaie à rendre).
      *
      * @return array<string, mixed>
      */
-    private function present(Order $order, $courier, bool $withClient): array
+    private function presentCurrent(Order $order, User $courier): array
     {
         // Étape suivante proposée au livreur (hors annulation, réservée à l'admin).
         $next = collect($this->workflow->allowedTransitions($order, $courier))
@@ -120,25 +161,33 @@ class DeliveryController extends Controller
             'id' => $order->id,
             'number' => $order->reference,
             'status' => $order->status->value,
-            'next_status' => $withClient ? $next?->value : null,
-            'created_at' => $order->created_at->setTimezone(config('gogab.timezone'))->format('d/m à H\hi'),
-            'store' => $order->store->name,
-            'store_neighborhood' => $order->store->neighborhood?->name,
-            'neighborhood' => $order->neighborhood->name,
-            'address_landmarks' => $order->address_landmarks,
-            'payment_method_label' => $order->payment_method->label(),
-            'cash_given' => $order->cash_given,
-            'client_note' => $order->client_note,
-            'total_price' => $order->total_price,
+            'next_status' => $next?->value,
+            'store' => [
+                'name' => $order->store->name,
+                'neighborhood' => $order->store->neighborhood?->name,
+                'address_landmarks' => $order->store->address_landmarks,
+                'phone' => $order->store->phone,
+            ],
+            'client' => [
+                // Prénom seulement : le livreur n'a pas besoin du nom complet.
+                'first_name' => Str::before(trim((string) $order->client?->name), ' ') ?: $order->client?->name,
+                'phone' => $order->client?->phone,
+                'neighborhood' => $order->neighborhood?->name,
+                'address_landmarks' => $order->address_landmarks,
+            ],
             'items' => $order->items->map(fn ($item) => [
                 'id' => $item->id,
-                'name' => $item->product->name,
+                'name' => $item->product?->name,
                 'quantity' => $item->quantity,
             ]),
-            'client' => $withClient ? [
-                'name' => $order->client->name,
-                'phone' => $order->client->phone,
-            ] : null,
+            'item_count' => (int) $order->items->sum('quantity'),
+            'client_note' => $order->client_note,
+            'payment_method_label' => $order->payment_method->label(),
+            'is_cash' => $order->payment_method === PaymentMethod::Cash,
+            'total_price' => $order->total_price,
+            'cash_given' => $order->cash_given,
+            'change_due' => $order->change_due,
+            'earning' => $order->delivery_fee,
         ];
     }
 }

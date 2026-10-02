@@ -103,11 +103,7 @@ Route::middleware(['auth', 'role:delivery', 'approved'])->prefix('delivery')->na
     Route::get('/offers', [DeliveryController::class, 'offers'])->name('offers');
     Route::post('/orders/{order}/accept', [DeliveryController::class, 'accept'])->name('orders.accept');
     Route::get('/current', [DeliveryController::class, 'current'])->name('current');
-    Route::get('/history', fn () => Inertia::render('ComingSoon', [
-        'title' => 'Historique',
-        'description' => 'Vos courses terminées et vos gains arrivent dans une prochaine version de l’espace livreur.',
-        'back' => 'delivery.dashboard',
-    ]))->name('history');
+    Route::get('/history', [DeliveryController::class, 'history'])->name('history');
     Route::get('/profile', [Delivery\ProfileController::class, 'show'])->name('profile');
     Route::patch('/availability', [Delivery\ProfileController::class, 'availability'])->name('availability');
     Route::patch('/profile/base-neighborhood', [Delivery\ProfileController::class, 'updateBaseNeighborhood'])->name('profile.base-neighborhood');

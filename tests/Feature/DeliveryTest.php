@@ -58,10 +58,9 @@ class DeliveryTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Delivery/Current')
-                ->has('orders', 1)
-                ->where('orders.0.id', $mine->id)
-                ->where('orders.0.next_status', 'arrive')
-                ->where('orders.0.client.phone', '066 20 00 01'));
+                ->where('order.id', $mine->id)
+                ->where('order.next_status', 'arrive')
+                ->where('order.client.phone', '066 20 00 01'));
 
         // Livreur d'une autre zone : aucune annonce.
         $this->actingAs($this->farCourier)
@@ -114,7 +113,7 @@ class DeliveryTest extends TestCase
 
         foreach (['en_livraison' => OrderStatus::Delivering, 'arrive' => OrderStatus::Arrived, 'livree' => OrderStatus::Delivered] as $step => $expected) {
             $this->actingAs($this->courier)
-                ->put("/orders/{$order->id}/status", ['status' => $step])
+                ->put("/orders/{$order->id}/status", ['status' => $step, 'cash_collected' => true])
                 ->assertSessionHas('success');
             $this->assertSame($expected, $order->fresh()->status);
         }

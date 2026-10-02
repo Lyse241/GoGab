@@ -214,7 +214,7 @@ class DeliveryAnnouncementTest extends TestCase
 
         // Livraison : onglet « Terminées ».
         $this->actingAs($this->courier)->put(route('orders.status.update', $order), ['status' => 'arrive']);
-        $this->actingAs($this->courier)->put(route('orders.status.update', $order), ['status' => 'livree']);
+        $this->actingAs($this->courier)->put(route('orders.status.update', $order), ['status' => 'livree', 'cash_collected' => true]);
         $this->assertContains('Commande livrée', $this->notificationTitles($this->owner));
         $this->actingAs($this->owner)
             ->get('/business/orders?tab=finished')

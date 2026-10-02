@@ -39,6 +39,7 @@ class Order extends Model
         'status',
         'announced_at',
         'announcement_count',
+        'cash_collected_at',
     ];
 
     /**
@@ -57,6 +58,7 @@ class Order extends Model
             'status' => OrderStatus::class,
             'announced_at' => 'datetime',
             'announcement_count' => 'integer',
+            'cash_collected_at' => 'datetime',
         ];
     }
 

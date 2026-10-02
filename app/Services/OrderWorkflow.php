@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\Role;
 use App\Exceptions\OrderTransitionException;
 use App\Models\Order;
@@ -74,6 +75,9 @@ class OrderWorkflow
     /** Course prise par un autre livreur juste avant (l'interface retire alors l'offre). */
     public const TAKEN_MESSAGE = 'Cette course vient d’être prise par un autre livreur.';
 
+    /** Commande cash : confirmation de l'encaissement obligatoire avant « livrée ». */
+    public const CASH_MESSAGE = 'Confirmez le montant encaissé avant de marquer la commande comme remise.';
+
     /** Une seule course active à la fois par livreur. */
     public const BUSY_MESSAGE = 'Vous avez déjà une course en cours : terminez-la avant d’en accepter une autre.';
 
@@ -117,13 +121,16 @@ class OrderWorkflow
     /**
      * Fait passer la commande au statut $to au nom de $actor.
      *
+     * $cashCollected : le livreur confirme avoir encaissé le paiement à la livraison (obligatoire
+     * pour passer une commande cash à « livrée » ; enregistré dans orders.cash_collected_at).
+     *
      * @throws OrderTransitionException transition interdite (rien n'est modifié)
      */
-    public function transition(Order $order, OrderStatus $to, User $actor, ?string $note = null): Order
+    public function transition(Order $order, OrderStatus $to, User $actor, ?string $note = null, bool $cashCollected = false): Order
     {
         $note = filled($note) ? trim($note) : null;
 
-        $order = DB::transaction(function () use ($order, $to, $actor, $note) {
+        $order = DB::transaction(function () use ($order, $to, $actor, $note, $cashCollected) {
             // Relue et verrouillée : deux actions simultanées ne peuvent pas partir du même statut.
             $fresh = Order::with(['store.neighborhood'])->lockForUpdate()->find($order->id)
                 ?? throw new OrderTransitionException('Cette commande n’existe plus.');
@@ -138,6 +145,13 @@ class OrderWorkflow
             $this->authorize($fresh, $to, $actor, $note);
 
             $changes = ['status' => $to, 'updated_at' => now()];
+            // Remise d'une commande payée en cash : le livreur confirme le montant encaissé.
+            if ($to === OrderStatus::Delivered && $fresh->payment_method === PaymentMethod::Cash && $actor->role === Role::Delivery) {
+                if (! $cashCollected) {
+                    throw new OrderTransitionException(self::CASH_MESSAGE, $fresh, $to);
+                }
+                $changes['cash_collected_at'] = now();
+            }
             if ($to === OrderStatus::CourierAssigned) {
                 $changes['delivery_id'] = $actor->id;
             }

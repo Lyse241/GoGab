@@ -7,6 +7,7 @@ use App\Models\DeliveryProfile;
 use App\Models\Neighborhood;
 use App\Models\Order;
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -67,16 +68,44 @@ class CourierProfileService
      */
     public function todayStats(User $courier): array
     {
-        $start = StoreHours::now()->startOfDay()->utc();
-        $delivered = fn (): Builder => Order::query()
-            ->where('delivery_id', $courier->id)
-            ->where('status', OrderStatus::Delivered)
-            ->whereBetween('updated_at', [$start, $start->addDay()]);
+        $start = StoreHours::now()->startOfDay();
+        $delivered = $this->deliveredBetween($courier, $start, $start->addDay());
 
         return [
-            'deliveries' => $delivered()->count(),
-            'earnings' => (float) $delivered()->sum('delivery_fee'),
+            'deliveries' => $delivered->count(),
+            'earnings' => (float) $delivered->sum('delivery_fee'),
         ];
+    }
+
+    /**
+     * Gains (frais de livraison des courses livrées) du jour, de la semaine (lundi → dimanche)
+     * et du mois, à l'heure de Libreville.
+     *
+     * @return array{today: float, week: float, month: float}
+     */
+    public function earnings(User $courier): array
+    {
+        $now = StoreHours::now();
+        $sum = fn (CarbonInterface $from, CarbonInterface $to): float => (float) $this->deliveredBetween($courier, $from, $to)->sum('delivery_fee');
+
+        return [
+            'today' => $sum($now->startOfDay(), $now->startOfDay()->addDay()),
+            'week' => $sum($now->startOfWeek(CarbonInterface::MONDAY), $now->startOfWeek(CarbonInterface::MONDAY)->addWeek()),
+            'month' => $sum($now->startOfMonth(), $now->startOfMonth()->addMonth()),
+        ];
+    }
+
+    /**
+     * Courses livrées par le livreur entre deux instants (heure de livraison = updated_at :
+     * une commande livrée ne change plus).
+     */
+    private function deliveredBetween(User $courier, CarbonInterface $from, CarbonInterface $to): Builder
+    {
+        return Order::query()
+            ->where('delivery_id', $courier->id)
+            ->where('status', OrderStatus::Delivered)
+            ->where('updated_at', '>=', $from->utc())
+            ->where('updated_at', '<', $to->utc());
     }
 
     private function profile(User $courier): DeliveryProfile

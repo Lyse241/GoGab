@@ -132,7 +132,7 @@ class OrderTrackingTest extends TestCase
 
         // Commande livrée : plus de numéro à appeler.
         foreach ([OrderStatus::Delivering, OrderStatus::Arrived, OrderStatus::Delivered] as $step) {
-            $this->workflow->transition($order->fresh(), $step, $this->courier);
+            $this->workflow->transition($order->fresh(), $step, $this->courier, cashCollected: true);
         }
         $this->actingAs($this->client)
             ->get("/orders/{$order->id}")

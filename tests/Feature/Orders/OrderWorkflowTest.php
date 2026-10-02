@@ -92,7 +92,7 @@ class OrderWorkflowTest extends TestCase
         ];
 
         foreach ($steps as [$to, $actor]) {
-            $order = $this->workflow->transition($order, $to, $actor);
+            $order = $this->workflow->transition($order, $to, $actor, cashCollected: $to === OrderStatus::Delivered);
             $this->assertSame($to, $order->status);
         }
 
