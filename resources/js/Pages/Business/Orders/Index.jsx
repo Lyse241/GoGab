@@ -1,3 +1,5 @@
+import CourierCard from '@/Components/Business/CourierCard';
+import DeliveryAnnouncement from '@/Components/Business/DeliveryAnnouncement';
 import OrderActions from '@/Components/Business/OrderActions';
 import Card from '@/Components/UI/Card';
 import EmptyState from '@/Components/UI/EmptyState';
@@ -19,7 +21,7 @@ const SOUND_KEY = 'gogab_order_sound';
 const TABS = [
     { value: 'new', label: 'Nouvelles' },
     { value: 'preparing', label: 'En préparation' },
-    { value: 'searching', label: 'Recherche de livreur' },
+    { value: 'searching', label: 'Attente livreur' },
     { value: 'delivering', label: 'En livraison' },
     { value: 'finished', label: 'Terminées' },
 ];
@@ -27,7 +29,7 @@ const TABS = [
 const EMPTY = {
     new: 'Aucune nouvelle commande. Elles apparaissent ici automatiquement.',
     preparing: 'Aucune commande en préparation.',
-    searching: 'Aucune commande en attente d’un livreur.',
+    searching: 'Aucune commande en attente d’un livreur. Publiez l’annonce quand une commande est prête.',
     delivering: 'Aucune commande en cours de livraison.',
     finished: 'Aucune commande terminée pour le moment.',
 };
@@ -117,6 +119,9 @@ function OrderCard({ order }) {
                 </p>
             )}
 
+            <DeliveryAnnouncement order={order} />
+            <CourierCard courier={order.courier} className="rounded-xl bg-secondary-50/60 px-3 py-2" />
+
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3">
                 <OrderActions order={order} size="sm" />
                 <Link
@@ -133,7 +138,8 @@ function OrderCard({ order }) {
 
 /**
  * Commandes reçues, en direct (rafraîchies toutes les 10 s) : onglets par étape, actions
- * (accepter, refuser, préparer, publier l'annonce), toast + son à l'arrivée d'une commande.
+ * (accepter, refuser, préparer, publier l'annonce, relancer / annuler une annonce sans réponse),
+ * livreur assigné avec bouton Appeler, toast + son à l'arrivée d'une commande.
  */
 export default function Index({ orders, tab, counts, pendingIds }) {
     const toast = useToast();

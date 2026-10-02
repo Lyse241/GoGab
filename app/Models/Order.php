@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +12,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
+    /**
+     * Délai sans livreur après lequel l'entreprise peut relancer l'annonce ou annuler la commande.
+     */
+    public const ANNOUNCEMENT_RETRY_MINUTES = 5;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -31,6 +37,8 @@ class Order extends Model
         'client_note',
         'cancel_reason',
         'status',
+        'announced_at',
+        'announcement_count',
     ];
 
     /**
@@ -47,6 +55,8 @@ class Order extends Model
             'cash_given' => 'decimal:2',
             'payment_method' => PaymentMethod::class,
             'status' => OrderStatus::class,
+            'announced_at' => 'datetime',
+            'announcement_count' => 'integer',
         ];
     }
 
@@ -59,6 +69,29 @@ class Order extends Model
         return Attribute::get(fn (): ?float => $this->payment_method === PaymentMethod::Cash && $this->cash_given !== null
             ? round((float) $this->cash_given - (float) $this->total_price, 2)
             : null);
+    }
+
+    /**
+     * Heure à partir de laquelle l'entreprise peut relancer (ou annuler) une annonce restée
+     * sans livreur ; null si la commande n'est pas en recherche de livreur.
+     */
+    public function announcementRetryAt(): ?CarbonInterface
+    {
+        if ($this->status !== OrderStatus::SearchingCourier || $this->delivery_id !== null) {
+            return null;
+        }
+
+        return ($this->announced_at ?? $this->updated_at)?->copy()->addMinutes(self::ANNOUNCEMENT_RETRY_MINUTES);
+    }
+
+    /**
+     * Annonce restée sans réponse depuis au moins ANNOUNCEMENT_RETRY_MINUTES.
+     */
+    public function announcementIsStale(): bool
+    {
+        $retryAt = $this->announcementRetryAt();
+
+        return $retryAt !== null && now()->greaterThanOrEqualTo($retryAt);
     }
 
     /**

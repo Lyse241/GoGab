@@ -1,4 +1,5 @@
 import Button from '@/Components/UI/Button';
+import ConfirmDialog from '@/Components/UI/ConfirmDialog';
 import Modal from '@/Components/UI/Modal';
 import Textarea from '@/Components/UI/Textarea';
 import { cn } from '@/utils/cn';
@@ -10,17 +11,19 @@ import { useId, useState } from 'react';
 const ACTIONS = {
     acceptee: { label: 'Accepter', icon: Check, variant: 'primary' },
     en_preparation: { label: 'Marquer « En préparation »', icon: ChefHat, variant: 'secondary' },
-    en_recherche_livreur: { label: 'Commande prête : chercher un livreur', icon: Megaphone, variant: 'primary' },
+    en_recherche_livreur: { label: 'Publier l’annonce de livraison', icon: Megaphone, variant: 'primary' },
     refusee: { label: 'Refuser', icon: X, variant: 'outline' },
 };
 
 /**
  * Boutons d'action d'une commande pour l'entreprise (liste des actions = OrderWorkflow).
- * Refuser ouvre une fenêtre : motif obligatoire, transmis au client.
+ * Refuser ouvre une fenêtre : motif obligatoire, transmis au client. Publier l'annonce de
+ * livraison demande une confirmation (les livreurs de la zone et le client sont prévenus).
  */
 export default function OrderActions({ order, className, size = 'md' }) {
     const [busy, setBusy] = useState(null);
     const [refusing, setRefusing] = useState(false);
+    const [announcing, setAnnouncing] = useState(false);
     const [reason, setReason] = useState('');
     const [error, setError] = useState(null);
     const reasonId = useId();
@@ -72,13 +75,33 @@ export default function OrderActions({ order, className, size = 'md' }) {
                             loading={busy === status}
                             disabled={busy !== null}
                             className={cn(status === 'refusee' && 'text-danger-700')}
-                            onClick={() => (status === 'refusee' ? (setError(null), setRefusing(true)) : send(status))}
+                            onClick={() => {
+                                if (status === 'refusee') {
+                                    setError(null);
+                                    setRefusing(true);
+                                } else if (status === 'en_recherche_livreur') {
+                                    setAnnouncing(true);
+                                } else {
+                                    send(status);
+                                }
+                            }}
                         >
                             {action.label}
                         </Button>
                     );
                 })}
             </div>
+
+            <ConfirmDialog
+                open={announcing}
+                onClose={() => setAnnouncing(false)}
+                onConfirm={() => send('en_recherche_livreur', null, () => setAnnouncing(false))}
+                loading={busy === 'en_recherche_livreur'}
+                variant="primary"
+                title="Publier l’annonce de livraison ?"
+                message={`La commande ${order.number} est prête : les livreurs disponibles de votre zone seront prévenus, ainsi que le client. Le premier qui accepte vient la chercher.`}
+                confirmLabel="Publier l’annonce"
+            />
 
             <Modal
                 open={refusing}

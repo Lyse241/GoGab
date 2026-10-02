@@ -124,6 +124,8 @@ Route::middleware(['auth', 'role:business', 'approved'])->prefix('business')->na
     // Commandes reçues, en direct (actions : PUT /orders/{order}/status → OrderWorkflow).
     Route::get('/orders', [Business\OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [Business\OrderController::class, 'show'])->middleware('can:view,order')->name('orders.show');
+    // Relance de l'annonce de livraison restée sans livreur (OrderWorkflow::relaunch).
+    Route::post('/orders/{order}/relaunch', [Business\OrderController::class, 'relaunch'])->middleware('can:view,order')->name('orders.relaunch');
 });
 
 Route::middleware(['auth', 'role:admin', 'approved'])->prefix('admin')->name('admin.')->group(function () {

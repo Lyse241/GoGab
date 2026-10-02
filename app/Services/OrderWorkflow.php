@@ -17,7 +17,8 @@ use Illuminate\Support\Facades\DB;
  * - place() : création (statut initial en_attente) ;
  * - transition() : tout changement de statut, selon la table TRANSITIONS (rôles autorisés),
  *   avec vérification que l'acteur est concerné, mise à jour en transaction, historique
- *   (order_status_histories) et notifications (Notifier).
+ *   (order_status_histories) et notifications (Notifier) ;
+ * - relaunch() : nouvel envoi de l'annonce aux livreurs (le statut ne change pas).
  *
  * Toute transition interdite lève OrderTransitionException sans rien modifier.
  */
@@ -25,7 +26,8 @@ class OrderWorkflow
 {
     /**
      * Statut de départ => [statut d'arrivée => rôles autorisés].
-     * L'admin peut annuler à tout moment avant la livraison.
+     * L'admin peut annuler à tout moment avant la livraison ; l'entreprise peut annuler une
+     * annonce restée sans livreur depuis Order::ANNOUNCEMENT_RETRY_MINUTES.
      *
      * @var array<string, array<string, list<Role>>>
      */
@@ -45,7 +47,7 @@ class OrderWorkflow
         ],
         'en_recherche_livreur' => [
             'livreur_assigne' => [Role::Delivery],
-            'annulee' => [Role::Admin],
+            'annulee' => [Role::Business, Role::Admin],
         ],
         'livreur_assigne' => [
             'en_livraison' => [Role::Delivery],
@@ -66,7 +68,7 @@ class OrderWorkflow
      */
     private const REASON_REQUIRED = [
         'refusee' => [Role::Business],
-        'annulee' => [Role::Admin],
+        'annulee' => [Role::Business, Role::Admin],
     ];
 
     /**
@@ -127,6 +129,10 @@ class OrderWorkflow
             if ($to === OrderStatus::CourierAssigned) {
                 $changes['delivery_id'] = $actor->id;
             }
+            if ($to === OrderStatus::SearchingCourier) {
+                $changes['announced_at'] = now();
+                $changes['announcement_count'] = 1;
+            }
             if (in_array($to, [OrderStatus::Refused, OrderStatus::Cancelled], true) && $note) {
                 $changes['cancel_reason'] = $note;
             }
@@ -157,6 +163,63 @@ class OrderWorkflow
         $this->notify($order, $to, $actor, $note);
 
         return $order;
+    }
+
+    /**
+     * Relance l'annonce d'une commande restée sans livreur : nouvelle notification aux livreurs
+     * disponibles de la zone. L'entreprise propriétaire peut relancer une fois le délai
+     * Order::ANNOUNCEMENT_RETRY_MINUTES écoulé ; l'admin à tout moment. Le statut ne change pas.
+     *
+     * @throws OrderTransitionException relance impossible (rien n'est modifié)
+     */
+    public function relaunch(Order $order, User $actor): Order
+    {
+        $order = DB::transaction(function () use ($order, $actor) {
+            $fresh = Order::with(['store.neighborhood'])->lockForUpdate()->find($order->id)
+                ?? throw new OrderTransitionException('Cette commande n’existe plus.');
+
+            $this->authorizeRelaunch($fresh, $actor);
+
+            $updated = Order::whereKey($fresh->id)
+                ->where('status', OrderStatus::SearchingCourier)
+                ->whereNull('delivery_id')
+                ->update([
+                    'announced_at' => now(),
+                    'announcement_count' => $fresh->announcement_count + 1,
+                    'updated_at' => now(),
+                ]);
+
+            if ($updated !== 1) {
+                throw new OrderTransitionException("La commande {$fresh->reference} a changé entre-temps. Actualisez la page.", $fresh);
+            }
+
+            return $fresh->refresh();
+        });
+
+        $order->load(['store.neighborhood', 'neighborhood']);
+        Notifier::send(
+            $this->couriersForZone($order->store->neighborhood?->zone),
+            'Course toujours disponible',
+            $this->announcementMessage($order),
+            route('delivery.dashboard'),
+            'info',
+        );
+
+        return $order;
+    }
+
+    /**
+     * L'acteur peut-il relancer l'annonce maintenant ?
+     */
+    public function canRelaunch(Order $order, User $actor): bool
+    {
+        try {
+            $this->authorizeRelaunch($order, $actor);
+
+            return true;
+        } catch (OrderTransitionException) {
+            return false;
+        }
     }
 
     /**
@@ -221,6 +284,42 @@ class OrderWorkflow
     /**
      * @throws OrderTransitionException
      */
+    private function authorizeRelaunch(Order $order, User $actor): void
+    {
+        if ($order->status !== OrderStatus::SearchingCourier || $order->delivery_id !== null) {
+            throw new OrderTransitionException("La commande {$order->reference} n’est plus en recherche de livreur : l’annonce ne peut pas être relancée.", $order);
+        }
+
+        if (! $actor->isApproved() || ! in_array($actor->role, [Role::Business, Role::Admin], true)) {
+            throw new OrderTransitionException('Vous ne pouvez pas relancer cette annonce.', $order);
+        }
+
+        if ($actor->isBusiness()) {
+            $order->loadMissing('store');
+            if ($order->store?->owner_id !== $actor->id) {
+                throw new OrderTransitionException("La commande {$order->reference} ne concerne pas votre commerce.", $order);
+            }
+            if (! $order->announcementIsStale()) {
+                throw new OrderTransitionException($this->retryTooEarlyMessage($order), $order);
+            }
+        }
+    }
+
+    private function retryTooEarlyMessage(Order $order): string
+    {
+        return 'Laissez '.Order::ANNOUNCEMENT_RETRY_MINUTES.' minutes aux livreurs pour répondre : vous pourrez relancer ou annuler à partir de '
+            .$order->announcementRetryAt()?->setTimezone(config('gogab.timezone'))->format('H\hi').'.';
+    }
+
+    private function announcementMessage(Order $order): string
+    {
+        return "{$order->store->name} ({$order->store->neighborhood?->name}) → {$order->neighborhood?->name} · "
+            .$this->money($order->total_price).'. Premier livreur à accepter, premier servi.';
+    }
+
+    /**
+     * @throws OrderTransitionException
+     */
     private function authorize(Order $order, OrderStatus $to, User $actor, ?string $note, bool $checkReason = true): void
     {
         $from = $order->status;
@@ -270,6 +369,11 @@ class OrderWorkflow
             }, $order, $to);
         }
 
+        // L'entreprise n'annule qu'une annonce restée sans livreur depuis le délai prévu.
+        if ($actor->role === Role::Business && $to === OrderStatus::Cancelled && ! $order->announcementIsStale()) {
+            throw new OrderTransitionException($this->retryTooEarlyMessage($order), $order, $to);
+        }
+
         if ($checkReason && in_array($actor->role, self::REASON_REQUIRED[$to->value] ?? [], true) && blank($note)) {
             throw new OrderTransitionException("Indiquez le motif pour passer la commande à « {$to->label()} ».", $order, $to);
         }
@@ -306,7 +410,7 @@ class OrderWorkflow
                 [
                     $this->couriersForZone($order->store->neighborhood?->zone),
                     'Nouvelle course disponible',
-                    "{$store} ({$order->store->neighborhood?->name}) → {$order->neighborhood?->name} · ".$this->money($order->total_price).'. Premier livreur à accepter, premier servi.',
+                    $this->announcementMessage($order),
                     $courierUrl,
                     'info',
                 ],

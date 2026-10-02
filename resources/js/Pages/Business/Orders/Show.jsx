@@ -1,3 +1,5 @@
+import CourierCard from '@/Components/Business/CourierCard';
+import DeliveryAnnouncement from '@/Components/Business/DeliveryAnnouncement';
 import OrderActions from '@/Components/Business/OrderActions';
 import Card, { CardHeader } from '@/Components/UI/Card';
 import StatusBadge from '@/Components/UI/StatusBadge';
@@ -5,7 +7,7 @@ import DashboardLayout from '@/Layouts/DashboardLayout';
 import Button from '@/Components/UI/Button';
 import { formatFCFA } from '@/utils/format';
 import { Head, usePoll } from '@inertiajs/react';
-import { ArrowLeft, Bike, History, MessageSquareText, Phone } from 'lucide-react';
+import { ArrowLeft, History, MessageSquareText } from 'lucide-react';
 
 function Row({ label, children }) {
     return (
@@ -64,6 +66,7 @@ export default function Show({ order }) {
                                 {order.client_note}
                             </p>
                         )}
+                        <DeliveryAnnouncement order={order} className="mt-4" />
                         <OrderActions order={order} className="mt-4 border-t border-gray-100 pt-4" />
                     </Card>
 
@@ -85,23 +88,8 @@ export default function Show({ order }) {
                     </Card>
 
                     {order.courier && (
-                        <Card className="flex items-center gap-3">
-                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary-50 text-secondary">
-                                <Bike className="h-5 w-5" aria-hidden="true" />
-                            </span>
-                            <div className="min-w-0 flex-1">
-                                <p className="font-semibold text-secondary-900">{order.courier.name}</p>
-                                <p className="text-sm text-gray-600">{order.courier.vehicle}</p>
-                            </div>
-                            {order.courier.phone && (
-                                <a
-                                    href={`tel:${order.courier.phone.replace(/\s/g, '')}`}
-                                    className="inline-flex h-10 items-center gap-2 rounded-full bg-primary-600 px-4 text-sm font-semibold text-white hover:bg-primary-700"
-                                >
-                                    <Phone className="h-4 w-4" aria-hidden="true" />
-                                    Appeler
-                                </a>
-                            )}
+                        <Card>
+                            <CourierCard courier={order.courier} />
                         </Card>
                     )}
                 </div>
