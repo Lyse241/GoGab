@@ -201,7 +201,7 @@ class OrderWorkflow
             $this->couriersForZone($order->store->neighborhood?->zone),
             'Course toujours disponible',
             $this->announcementMessage($order),
-            route('delivery.dashboard'),
+            route('delivery.offers'),
             'info',
         );
 
@@ -393,7 +393,8 @@ class OrderWorkflow
         $courier = $order->delivery;
         $clientUrl = route('orders.show', $order);
         $businessUrl = route('business.orders.show', $order);
-        $courierUrl = route('delivery.dashboard');
+        $courierUrl = route('delivery.current');
+        $offersUrl = route('delivery.offers');
         $reason = $note ? " Motif : {$note}" : '';
 
         $messages = match ($to) {
@@ -411,7 +412,7 @@ class OrderWorkflow
                     $this->couriersForZone($order->store->neighborhood?->zone),
                     'Nouvelle course disponible',
                     $this->announcementMessage($order),
-                    $courierUrl,
+                    $offersUrl,
                     'info',
                 ],
                 [$client, 'Recherche d’un livreur', "Votre commande {$ref} est prête : nous cherchons un livreur près de {$store}.", $clientUrl, 'info'],

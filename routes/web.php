@@ -6,6 +6,7 @@ use App\Http\Controllers\AccountWarningsController;
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\Business;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\Delivery;
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\NotificationController;
@@ -96,9 +97,20 @@ Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus'])
     ->middleware(['auth', 'approved'])
     ->name('orders.status.update');
 
-Route::middleware(['auth', 'role:delivery', 'approved'])->group(function () {
-    Route::get('/delivery', [DeliveryController::class, 'dashboard'])->name('delivery.dashboard');
-    Route::post('/delivery/orders/{order}/accept', [DeliveryController::class, 'accept'])->name('delivery.orders.accept');
+// Espace livreur (Mobile-First) : accueil, offres de sa zone, course en cours, historique, profil.
+Route::middleware(['auth', 'role:delivery', 'approved'])->prefix('delivery')->name('delivery.')->group(function () {
+    Route::get('/', Delivery\HomeController::class)->name('dashboard');
+    Route::get('/offers', [DeliveryController::class, 'offers'])->name('offers');
+    Route::post('/orders/{order}/accept', [DeliveryController::class, 'accept'])->name('orders.accept');
+    Route::get('/current', [DeliveryController::class, 'current'])->name('current');
+    Route::get('/history', fn () => Inertia::render('ComingSoon', [
+        'title' => 'Historique',
+        'description' => 'Vos courses terminées et vos gains arrivent dans une prochaine version de l’espace livreur.',
+        'back' => 'delivery.dashboard',
+    ]))->name('history');
+    Route::get('/profile', [Delivery\ProfileController::class, 'show'])->name('profile');
+    Route::patch('/availability', [Delivery\ProfileController::class, 'availability'])->name('availability');
+    Route::patch('/profile/base-neighborhood', [Delivery\ProfileController::class, 'updateBaseNeighborhood'])->name('profile.base-neighborhood');
 });
 
 // Espace entreprise : un compte entreprise validé gère son propre commerce (StorePolicy::manage).

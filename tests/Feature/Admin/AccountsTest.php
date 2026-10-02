@@ -142,7 +142,7 @@ class AccountsTest extends TestCase
         // Les autres rôles ne reçoivent pas ce compteur.
         $this->actingAs(User::factory()->create(['role' => 'delivery']))
             ->get('/delivery')
-            ->assertInertia(fn (Assert $page) => $page->where('badges', []));
+            ->assertInertia(fn (Assert $page) => $page->missing('badges.pending_accounts'));
     }
 
     public function test_directories_list_every_status_of_one_role(): void

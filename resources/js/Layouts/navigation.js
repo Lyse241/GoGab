@@ -6,6 +6,7 @@ import {
     House,
     LayoutDashboard,
     MapPin,
+    Megaphone,
     Package,
     ReceiptText,
     ShieldAlert,
@@ -59,10 +60,13 @@ export const navigation = {
         { route: 'business.store.edit', label: 'Mon commerce', shortLabel: 'Commerce', icon: Store, active: ['business.store.*'] },
         { route: 'profile.edit', label: 'Mon profil', icon: UserRound },
     ],
+    // Espace livreur (Mobile-First) : 5 onglets dans la barre du bas, sans « Plus ».
     delivery: [
-        { route: 'delivery.dashboard', label: 'Courses', icon: Bike },
+        { route: 'delivery.dashboard', label: 'Accueil', icon: House },
+        { route: 'delivery.offers', label: 'Offres', icon: Megaphone, badge: 'offers' },
+        { route: 'delivery.current', label: 'En cours', icon: Bike, badge: 'active_orders' },
         { route: 'delivery.history', label: 'Historique', icon: History },
-        { route: 'profile.edit', label: 'Mon profil', icon: UserRound },
+        { route: 'delivery.profile', label: 'Profil', icon: UserRound, active: ['delivery.profile', 'delivery.profile.*', 'profile.edit'] },
     ],
     client: [
         { route: 'home', label: 'Accueil', icon: House },

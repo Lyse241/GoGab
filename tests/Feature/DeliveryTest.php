@@ -26,7 +26,7 @@ class DeliveryTest extends TestCase
         $this->setUpOrderWorld();
     }
 
-    public function test_dashboard_lists_zone_announcements_and_own_deliveries(): void
+    public function test_offers_and_current_pages_list_zone_announcements_and_own_deliveries(): void
     {
         $announcement = $this->makeOrder(OrderStatus::SearchingCourier);
         $this->makeOrder(OrderStatus::Preparing); // pas encore annoncée
@@ -35,30 +35,36 @@ class DeliveryTest extends TestCase
         $this->makeOrder(OrderStatus::Delivered, ['delivery_id' => $this->courier->id]);
 
         $this->actingAs($this->courier)
-            ->get('/delivery')
+            ->get('/delivery/offers')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Delivery/Dashboard')
+                ->component('Delivery/Offers')
                 ->where('zone', 'Centre')
                 ->where('isAvailable', true)
-                ->has('available', 1)
-                ->where('available.0.id', $announcement->id)
-                ->where('available.0.store', 'Chez Maman Ngoye')
-                ->where('available.0.store_neighborhood', 'Louis')
-                ->where('available.0.neighborhood', 'Glass')
-                ->where('available.0.cash_given', '10000.00')
-                ->where('available.0.client', null) // pas de téléphone avant acceptation
-                ->where('available.0.next_status', null)
-                ->has('mine', 1)
-                ->where('mine.0.id', $mine->id)
-                ->where('mine.0.next_status', 'arrive')
-                ->where('mine.0.client.phone', '066 20 00 01')
-                ->where('deliveredToday', 1));
+                ->has('offers', 1)
+                ->where('offers.0.id', $announcement->id)
+                ->where('offers.0.store', 'Chez Maman Ngoye')
+                ->where('offers.0.store_neighborhood', 'Louis')
+                ->where('offers.0.neighborhood', 'Glass')
+                ->where('offers.0.cash_given', '10000.00')
+                ->where('offers.0.client', null) // pas de téléphone avant acceptation
+                ->where('offers.0.next_status', null)
+                ->where('badges', ['offers' => 1, 'active_orders' => 1]));
+
+        $this->actingAs($this->courier)
+            ->get('/delivery/current')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Delivery/Current')
+                ->has('orders', 1)
+                ->where('orders.0.id', $mine->id)
+                ->where('orders.0.next_status', 'arrive')
+                ->where('orders.0.client.phone', '066 20 00 01'));
 
         // Livreur d'une autre zone : aucune annonce.
         $this->actingAs($this->farCourier)
-            ->get('/delivery')
-            ->assertInertia(fn (Assert $page) => $page->where('zone', 'Nord')->has('available', 0));
+            ->get('/delivery/offers')
+            ->assertInertia(fn (Assert $page) => $page->where('zone', 'Nord')->has('offers', 0));
     }
 
     public function test_unavailable_courier_sees_no_announcement(): void
@@ -67,8 +73,8 @@ class DeliveryTest extends TestCase
         $this->courier->deliveryProfile->update(['is_available' => false]);
 
         $this->actingAs($this->courier->fresh())
-            ->get('/delivery')
-            ->assertInertia(fn (Assert $page) => $page->where('isAvailable', false)->has('available', 0));
+            ->get('/delivery/offers')
+            ->assertInertia(fn (Assert $page) => $page->where('isAvailable', false)->has('offers', 0)->where('badges.offers', 0));
     }
 
     public function test_courier_takes_an_announced_order(): void
@@ -77,6 +83,7 @@ class DeliveryTest extends TestCase
 
         $this->actingAs($this->courier)
             ->post("/delivery/orders/{$order->id}/accept")
+            ->assertRedirect('/delivery/current')
             ->assertSessionHas('success');
 
         $order->refresh();

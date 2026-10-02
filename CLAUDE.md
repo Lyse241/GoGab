@@ -77,7 +77,7 @@ Branches :
 - Relance d’annonce : `OrderWorkflow::relaunch($order, $actor)` (statut inchangé, verrou + mise à jour conditionnelle, `announced_at` = maintenant, `announcement_count` + 1, notification « Course toujours disponible » aux livreurs de la zone, pas au client) ; entreprise propriétaire après 5 min (`Order::announcementIsStale()`, `announcementRetryAt()`), admin à tout moment ; `canRelaunch()`. Route `POST /business/orders/{order}/relaunch` (`business.orders.relaunch`).
 - Refus : `App\Exceptions\OrderTransitionException` (message français précis ; rendu = retour avec toast d’erreur, ou 422 JSON), commande inchangée. `allowedTransitions($order, $actor)` pour l’interface ; `courierServesStore()`.
 - HTTP : `PUT /orders/{order}/status` (`orders.status.update`, tous rôles connectés et validés, champs `status`, `note`) ; `POST /delivery/orders/{order}/accept` (prise de course). **`OrderPolicy::view`** : client = ses commandes, entreprise = son commerce, livreur = ses courses + annonces de sa zone, admin = toutes.
-- Tableau de bord livreur : annonces `en_recherche_livreur` de sa zone (vide s’il est indisponible ou sans zone), courses en cours avec l’étape suivante proposée par le workflow.
+- Espace livreur : voir « Espace livreur » plus bas (offres de sa zone sur `/delivery/offers`, courses en cours sur `/delivery/current`).
 - Attention démo : les commerces seedés sans propriétaire (`owner_id` null) ne peuvent pas accepter de commande (seule « Chez Maman Ngoye » a une entreprise).
 - Tests : `tests/Feature/Orders/` (`OrderWorkflowTest`, `OrderPolicyTest`, trait `BuildsOrders`), `DeliveryTest`.
 
@@ -178,6 +178,16 @@ Accueil (`StoreController@index` → `Public/Home`) : bandeau vert (`Hero`, base
 - Design system : `UI/Switch` (interrupteur accessible Headless UI, `size` sm | md | lg, `reverse` = interrupteur avant le libellé, `loading`) ; `UI/FileUpload` accepte `onRemoveCurrent` (bouton « Retirer » sur le fichier déjà enregistré).
 - Démo : `entreprise@gogab.ga` gère « Chez Maman Ngoye » (adresse, description et horaires renseignés par `TestAccountsSeeder`).
 
+## Espace livreur
+
+- `/delivery` (`['auth', 'role:delivery', 'approved']`, noms `delivery.*`), Mobile-First. Menu (`Layouts/navigation.js`, 5 onglets, pas de « Plus ») : Accueil (`delivery.dashboard`), Offres (`delivery.offers`, badge `offers`), En cours (`delivery.current`, badge `active_orders`), Historique (`delivery.history`, « Bientôt disponible » pour l’instant), Profil (`delivery.profile`).
+- `Layouts/DeliveryLayout` (props `title`, `subtitle`, `availability`, `actions`) = `DashboardLayout` + grand interrupteur `Components/Delivery/AvailabilitySwitch` (`PATCH /delivery/availability`, `delivery_profiles.is_available`, affichage optimiste). Prop partagée `courier` (livreurs seulement) : `is_available`, `base_neighborhood`, `zone`. Badges livreur : `offers` (annonces de sa zone s’il est disponible), `active_orders`.
+- Logique : **`App\Services\CourierProfileService`** (`setAvailability`, `setBaseNeighborhood`, `activeOrders`, `todayStats` = courses livrées et gains (somme de `delivery_fee`) sur la journée de Libreville, `ACTIVE_STATUSES`). Livreur sans `delivery_profile` → 404 sur disponibilité et profil.
+- Accueil (`Delivery\HomeController`, `Delivery/Home`) : zone d’activité, carte « course en cours » ou renvoi vers les offres, compteurs du jour (`stats.deliveries`, `stats.earnings`).
+- Offres (`DeliveryController@offers`, `Delivery/Offers`) et courses en cours (`DeliveryController@current`, `Delivery/Current`), cartes `Components/Delivery/DeliveryOrderCard` ; la prise de course (`POST /delivery/orders/{order}/accept`) redirige vers `/delivery/current`. Liens des notifications : annonces → `/delivery/offers`, autres → `/delivery/current`.
+- Profil (`Delivery\ProfileController`, `Delivery/Profile`) : infos personnelles (modification sur `/profile`), véhicule, quartier de base modifiable (`PATCH /delivery/profile/base-neighborhood`, `Delivery\UpdateBaseNeighborhoodRequest`) qui change immédiatement la zone des offres, statut de chaque document obligatoire (`DocumentType::requiredFor`, « Manquant » s’il n’a pas été envoyé) puis des documents facultatifs.
+- Tests : `tests/Feature/Delivery/CourierSpaceTest`, `DeliveryTest`.
+
 ## Modération des comptes
 
 - **Tout passe par `App\Services\ModerationService`** (`warn`, `block`, `unblock`, `unblockExpired`, `flag`, `unflag`, `acknowledge`, `activeOrders`) protégé par `UserPolicy::moderate` (admin validé, jamais un autre admin ni soi-même) ; routes `POST /admin/accounts/{user}/moderation/{warn|block|unblock|flag|unflag}` (`Admin\ModerationController`, `ModerateAccountRequest`, middleware `can:moderate,user`).
@@ -255,6 +265,6 @@ Auth Breeze, profil, catalogue, panier (pages), commandes, livreur, admin, rôle
 - Espace entreprise : gestion des produits (prompt 15) et des commandes reçues
 - Gestion admin des commandes (annuler / relancer celles d’un compte bloqué) : prompt dédié
 - Upload et vérification des documents (table prête, pas d’écran)
-- Interfaces du cycle de commande : annulation par l’admin (le moteur `OrderWorkflow` et la route `orders.status.update` sont prêts), refonte de l’espace livreur
+- Interfaces du cycle de commande : annulation par l’admin (le moteur `OrderWorkflow` et la route `orders.status.update` sont prêts), historique et gains du livreur (prompt 26)
 - Pages client rangées sous `Pages/Client`
 - Activation du commerce (`is_active = true`) à la validation d’une entreprise par l’admin : à faire avec l’écran de validation

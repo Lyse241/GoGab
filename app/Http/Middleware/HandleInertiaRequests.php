@@ -7,7 +7,9 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Models\Category;
 use App\Models\Neighborhood;
+use App\Models\Order;
 use App\Models\User;
+use App\Services\CourierProfileService;
 use App\Services\ModerationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -77,8 +79,16 @@ class HandleInertiaRequests extends Middleware
                 $user?->isBusiness() && $user->isApproved() && $user->store !== null => [
                     'new_orders' => $user->store->orders()->where('status', OrderStatus::Pending)->count(),
                 ],
+                // Livreur : offres de sa zone (s'il est disponible) et course en cours.
+                $user?->isDelivery() && $user->isApproved() => $this->courierBadges($user),
                 default => [],
             },
+            // Espace livreur : interrupteur de disponibilité et zone d'activité (DeliveryLayout).
+            'courier' => fn () => $user?->isDelivery() && $user->deliveryProfile ? [
+                'is_available' => $user->deliveryProfile->is_available,
+                'base_neighborhood' => $user->deliveryProfile->baseNeighborhood?->name,
+                'zone' => $user->deliveryProfile->baseNeighborhood?->zone,
+            ] : null,
             // Sélecteur de quartier du header public.
             'neighborhoods' => fn () => Neighborhood::orderBy('name')->get(['id', 'name', 'zone']),
             // Footer public : moyens de paiement et catégories les plus fournies.
@@ -117,6 +127,26 @@ class HandleInertiaRequests extends Middleware
                 'message' => $warning->message,
                 'at' => $service->localDate($warning->created_at),
             ] : null,
+        ];
+    }
+
+    /**
+     * Compteurs du menu livreur : offres de sa zone (s'il est disponible) et courses en cours.
+     *
+     * @return array{offers: int, active_orders: int}
+     */
+    private function courierBadges(User $user): array
+    {
+        $profile = $user->deliveryProfile?->loadMissing('baseNeighborhood');
+        $zone = $profile?->is_available ? $profile->baseNeighborhood?->zone : null;
+
+        return [
+            'offers' => $zone ? Order::query()
+                ->where('status', OrderStatus::SearchingCourier)
+                ->whereNull('delivery_id')
+                ->whereHas('store.neighborhood', fn (Builder $query) => $query->where('zone', $zone))
+                ->count() : 0,
+            'active_orders' => $user->deliveries()->whereIn('status', CourierProfileService::ACTIVE_STATUSES)->count(),
         ];
     }
 

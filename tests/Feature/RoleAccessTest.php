@@ -65,7 +65,7 @@ class RoleAccessTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'delivery']))
             ->get('/delivery')
             ->assertInertia(fn ($page) => $page
-                ->component('Delivery/Dashboard')
+                ->component('Delivery/Home')
                 ->where('auth.role', 'delivery'));
     }
 }
