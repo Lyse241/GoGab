@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\OrderStatus;
 use App\Models\Neighborhood;
 use App\Models\User;
+use App\Services\OrderWorkflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Feature\Orders\BuildsOrders;
@@ -47,8 +48,9 @@ class DeliveryTest extends TestCase
                 ->where('offers.0.store_neighborhood', 'Louis')
                 ->where('offers.0.neighborhood', 'Glass')
                 ->where('offers.0.cash_given', '10000.00')
-                ->where('offers.0.client', null) // pas de téléphone avant acceptation
-                ->where('offers.0.next_status', null)
+                ->missing('offers.0.client') // ni nom ni téléphone avant acceptation
+                ->missing('offers.0.address_landmarks')
+                ->where('busy.id', $mine->id)
                 ->where('badges', ['offers' => 1, 'active_orders' => 1]));
 
         $this->actingAs($this->courier)
@@ -101,7 +103,7 @@ class DeliveryTest extends TestCase
 
         $this->actingAs($this->courier)
             ->post("/delivery/orders/{$order->id}/accept")
-            ->assertSessionHas('error', "La commande {$order->reference} a déjà été prise par un autre livreur.");
+            ->assertSessionHas('error', OrderWorkflow::TAKEN_MESSAGE);
 
         $this->assertSame($colleague->id, $order->fresh()->delivery_id);
     }

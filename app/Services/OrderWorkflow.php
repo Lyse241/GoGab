@@ -71,6 +71,12 @@ class OrderWorkflow
         'annulee' => [Role::Business, Role::Admin],
     ];
 
+    /** Course prise par un autre livreur juste avant (l'interface retire alors l'offre). */
+    public const TAKEN_MESSAGE = 'Cette course vient d’être prise par un autre livreur.';
+
+    /** Une seule course active à la fois par livreur. */
+    public const BUSY_MESSAGE = 'Vous avez déjà une course en cours : terminez-la avant d’en accepter une autre.';
+
     /**
      * Crée une commande au statut initial (en_attente), avec ses lignes, son historique et la
      * notification « nouvelle commande » à l'entreprise.
@@ -123,6 +129,12 @@ class OrderWorkflow
                 ?? throw new OrderTransitionException('Cette commande n’existe plus.');
             $from = $fresh->status;
 
+            // Prise de course : le livreur est verrouillé lui aussi, pour qu'un double envoi
+            // sur deux offres différentes ne lui donne pas deux courses actives.
+            if ($to === OrderStatus::CourierAssigned) {
+                User::whereKey($actor->id)->lockForUpdate()->first();
+            }
+
             $this->authorize($fresh, $to, $actor, $note);
 
             $changes = ['status' => $to, 'updated_at' => now()];
@@ -147,7 +159,7 @@ class OrderWorkflow
             if ($updated !== 1) {
                 throw new OrderTransitionException(
                     $to === OrderStatus::CourierAssigned
-                        ? "La commande {$fresh->reference} a déjà été prise par un autre livreur."
+                        ? self::TAKEN_MESSAGE
                         : "La commande {$fresh->reference} a changé entre-temps. Actualisez la page.",
                     $fresh,
                     $to,
@@ -268,6 +280,16 @@ class OrderWorkflow
     }
 
     /**
+     * Le livreur a-t-il déjà une course en cours (livreur assigné, en livraison, arrivé) ?
+     */
+    public function hasActiveDelivery(User $courier): bool
+    {
+        return Order::where('delivery_id', $courier->id)
+            ->whereIn('status', CourierProfileService::ACTIVE_STATUSES)
+            ->exists();
+    }
+
+    /**
      * Le livreur peut-il prendre les courses de ce commerce (même zone) ?
      */
     public function courierServesStore(User $courier, Order $order): bool
@@ -326,7 +348,7 @@ class OrderWorkflow
 
         // Course déjà prise : message explicite pour le livreur arrivé second.
         if ($to === OrderStatus::CourierAssigned && $order->delivery_id !== null && $order->delivery_id !== $actor->id) {
-            throw new OrderTransitionException("La commande {$order->reference} a déjà été prise par un autre livreur.", $order, $to);
+            throw new OrderTransitionException(self::TAKEN_MESSAGE, $order, $to);
         }
 
         if ($from->isFinal()) {
@@ -346,6 +368,16 @@ class OrderWorkflow
             throw new OrderTransitionException('Votre compte doit être validé pour agir sur une commande.', $order, $to);
         }
 
+        // Prise de course : livreur disponible, sans autre course active.
+        if ($actor->role === Role::Delivery && $to === OrderStatus::CourierAssigned && $order->delivery_id === null) {
+            if (! $actor->deliveryProfile?->is_available) {
+                throw new OrderTransitionException('Vous êtes indisponible : passez disponible pour accepter une course.', $order, $to);
+            }
+            if ($this->hasActiveDelivery($actor)) {
+                throw new OrderTransitionException(self::BUSY_MESSAGE, $order, $to);
+            }
+        }
+
         $concerned = match ($actor->role) {
             Role::Admin => true,
             Role::Client => $order->client_id === $actor->id,
@@ -362,8 +394,8 @@ class OrderWorkflow
                 Role::Client => "La commande {$order->reference} n’est pas la vôtre.",
                 Role::Delivery => $to === OrderStatus::CourierAssigned
                     ? ($order->delivery_id !== null
-                        ? "La commande {$order->reference} a déjà été prise par un autre livreur."
-                        : "La commande {$order->reference} n’est pas dans votre zone (ou vous êtes indisponible).")
+                        ? self::TAKEN_MESSAGE
+                        : "La commande {$order->reference} n’est pas dans votre zone.")
                     : "La commande {$order->reference} n’est pas assignée à votre compte.",
                 default => 'Vous n’êtes pas concerné par cette commande.',
             }, $order, $to);

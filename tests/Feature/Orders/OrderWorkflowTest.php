@@ -243,7 +243,7 @@ class OrderWorkflowTest extends TestCase
         $this->workflow->transition($order, OrderStatus::CourierAssigned, $this->courier);
 
         // Le second livreur part de la même commande (page restée ouverte) : refusé.
-        $this->assertForbidden($order, OrderStatus::CourierAssigned, $colleague, 'déjà été prise par un autre livreur');
+        $this->assertForbidden($order, OrderStatus::CourierAssigned, $colleague, 'vient d’être prise par un autre livreur');
         $this->assertSame($this->courier->id, $order->fresh()->delivery_id);
         $this->assertSame(1, $order->statusHistories()->where('status', OrderStatus::CourierAssigned)->count());
     }
@@ -254,7 +254,7 @@ class OrderWorkflowTest extends TestCase
         // Un autre livreur a pris la course juste avant (base modifiée hors de ce modèle en mémoire).
         Order::whereKey($order->id)->update(['delivery_id' => $this->farCourier->id]);
 
-        $this->assertForbidden($order, OrderStatus::CourierAssigned, $this->courier, 'déjà été prise');
+        $this->assertForbidden($order, OrderStatus::CourierAssigned, $this->courier, 'vient d’être prise');
     }
 
     public function test_allowed_transitions_depend_on_role_status_and_actor(): void
