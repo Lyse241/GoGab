@@ -1,3 +1,4 @@
+import ReportProblemButton from '@/Components/Reports/ReportProblemButton';
 import Button from '@/Components/UI/Button';
 import Card from '@/Components/UI/Card';
 import EmptyState from '@/Components/UI/EmptyState';
@@ -63,7 +64,10 @@ export default function History({ deliveries, earnings }) {
                                         </span>
                                     </p>
                                 </div>
-                                <p className="shrink-0 font-bold text-primary-700">+{formatFCFA(delivery.earning)}</p>
+                                <div className="flex shrink-0 flex-col items-end">
+                                    <p className="font-bold text-primary-700">+{formatFCFA(delivery.earning)}</p>
+                                    <ReportProblemButton reporting={delivery.reporting} size="sm" label="Signaler" className="-mr-2 text-gray-500" />
+                                </div>
                             </li>
                         ))}
                     </ul>

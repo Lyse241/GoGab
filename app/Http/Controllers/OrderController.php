@@ -7,6 +7,7 @@ use App\Enums\PaymentMethod;
 use App\Http\Requests\StoreOrderRequest;
 use App\Models\Order;
 use App\Services\OrderWorkflow;
+use App\Services\ReportService;
 use App\Support\OrderTimeline;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -135,12 +136,12 @@ class OrderController extends Controller
      * Suivi d'une commande : récapitulatif, timeline (order_status_histories), livreur assigné,
      * annulation tant qu'elle est en attente. Rafraîchi toutes les 10 s par la page.
      */
-    public function show(Request $request, Order $order, OrderWorkflow $workflow): Response
+    public function show(Request $request, Order $order, OrderWorkflow $workflow, ReportService $reports): Response
     {
         // OrderPolicy::view : 403 si la commande n'est pas la sienne.
         Gate::authorize('view', $order);
 
-        $order->load(['store:id,name,logo,phone', 'neighborhood:id,name', 'items.product:id,name,image', 'statusHistories', 'delivery.deliveryProfile']);
+        $order->load(['store:id,name,logo,phone,owner_id', 'neighborhood:id,name', 'items.product:id,name,image', 'statusHistories', 'delivery.deliveryProfile']);
         $courier = $order->delivery;
 
         return Inertia::render('Orders/Show', [
@@ -179,6 +180,8 @@ class OrderController extends Controller
                     'price' => $item->price,
                 ]),
             ],
+            // « Signaler un problème » : l'entreprise ou le livreur de cette commande.
+            'reporting' => $reports->formFor($order, $request->user()),
         ]);
     }
 }

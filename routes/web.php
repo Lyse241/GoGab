@@ -12,6 +12,7 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StoreController;
 use Illuminate\Http\Request;
@@ -97,6 +98,11 @@ Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus'])
     ->middleware(['auth', 'approved'])
     ->name('orders.status.update');
 
+// « Signaler un problème » : uniquement l'autre partie d'une commande (OrderPolicy::report).
+Route::post('/orders/{order}/reports', [ReportController::class, 'store'])
+    ->middleware(['auth', 'approved', 'can:report,order'])
+    ->name('reports.store');
+
 // Espace livreur (Mobile-First) : accueil, offres de sa zone, course en cours, historique, profil.
 Route::middleware(['auth', 'role:delivery', 'approved'])->prefix('delivery')->name('delivery.')->group(function () {
     Route::get('/', Delivery\HomeController::class)->name('dashboard');
@@ -153,6 +159,10 @@ Route::middleware(['auth', 'role:admin', 'approved'])->prefix('admin')->name('ad
 
     // Modération (UserPolicy::moderate) : avertissement, blocage, déblocage, signalement interne.
     Route::get('/moderation', [Admin\ModerationController::class, 'index'])->name('moderation.index');
+    // Signalements des utilisateurs (ReportPolicy : admins validés).
+    Route::get('/reports', [Admin\ReportController::class, 'index'])->middleware('can:viewAny,App\Models\Report')->name('reports.index');
+    Route::get('/reports/{report}', [Admin\ReportController::class, 'show'])->middleware('can:view,report')->name('reports.show');
+    Route::post('/reports/{report}/handle', [Admin\ReportController::class, 'handle'])->middleware('can:view,report')->name('reports.handle');
     Route::prefix('/accounts/{user}/moderation')->name('accounts.moderation.')->middleware('can:moderate,user')->controller(Admin\ModerationController::class)->group(function () {
         Route::post('/warn', 'warn')->name('warn');
         Route::post('/block', 'block')->name('block');

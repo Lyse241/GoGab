@@ -1,5 +1,6 @@
 import { StoreThumb } from '@/Components/Cart/CartList';
 import LazyImage from '@/Components/LazyImage';
+import ReportProblemButton from '@/Components/Reports/ReportProblemButton';
 import Button from '@/Components/UI/Button';
 import Card, { CardHeader } from '@/Components/UI/Card';
 import ConfirmDialog from '@/Components/UI/ConfirmDialog';
@@ -92,7 +93,7 @@ function Timeline({ steps }) {
  * Suivi d'une commande : timeline en direct, livreur (appel), annulation tant qu'elle est en
  * attente, récapitulatif (articles, totaux, adresse, paiement).
  */
-export default function Show({ order }) {
+export default function Show({ order, reporting }) {
     const [cancelOpen, setCancelOpen] = useState(false);
     const [reason, setReason] = useState('');
     const [cancelling, setCancelling] = useState(false);
@@ -234,6 +235,12 @@ export default function Show({ order }) {
                         </div>
                     </dl>
                 </Card>
+
+                {reporting && (
+                    <div className="flex justify-center">
+                        <ReportProblemButton reporting={reporting} className="text-gray-600" />
+                    </div>
+                )}
             </div>
 
             <ConfirmDialog

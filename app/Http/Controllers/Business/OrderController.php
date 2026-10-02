@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\Store;
 use App\Services\OrderWorkflow;
+use App\Services\ReportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -64,7 +65,7 @@ class OrderController extends Controller
         ]);
     }
 
-    public function show(Request $request, Order $order): Response
+    public function show(Request $request, Order $order, ReportService $reports): Response
     {
         $this->currentStore($request);
         Gate::authorize('view', $order);
@@ -90,6 +91,8 @@ class OrderController extends Controller
                     'at_iso' => $entry->created_at->toIso8601String(),
                 ]),
             ],
+            // « Signaler un problème » : le client ou le livreur de cette commande.
+            'reporting' => $reports->formFor($order, $request->user()),
         ]);
     }
 

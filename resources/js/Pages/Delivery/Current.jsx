@@ -1,3 +1,4 @@
+import ReportProblemButton from '@/Components/Reports/ReportProblemButton';
 import Button from '@/Components/UI/Button';
 import Card from '@/Components/UI/Card';
 import Checkbox from '@/Components/UI/Checkbox';
@@ -105,14 +106,14 @@ function CashPanel({ order }) {
  * (en bas, à portée de pouce). Récupération et remise demandent une confirmation ; en cash, la
  * remise exige de cocher « Montant encaissé » (le serveur le revérifie).
  */
-export default function Current({ order }) {
+export default function Current({ order, reporting }) {
     const [confirming, setConfirming] = useState(false);
     const [cashCollected, setCashCollected] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
 
     // Annulation par l'admin, etc. : l'écran suit l'état réel de la course.
-    usePoll(15000, { only: ['order', 'badges'] });
+    usePoll(15000, { only: ['order', 'reporting', 'badges'] });
 
     if (!order) {
         return (
@@ -211,6 +212,10 @@ export default function Current({ order }) {
                     </p>
                 )}
             </Card>
+
+            <div className="flex justify-center">
+                <ReportProblemButton reporting={reporting} className="text-gray-600" />
+            </div>
 
             {/* Espace pour la barre d'action fixe. */}
             <div className="h-20" aria-hidden="true" />

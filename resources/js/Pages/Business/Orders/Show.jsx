@@ -1,6 +1,7 @@
 import CourierCard from '@/Components/Business/CourierCard';
 import DeliveryAnnouncement from '@/Components/Business/DeliveryAnnouncement';
 import OrderActions from '@/Components/Business/OrderActions';
+import ReportProblemButton from '@/Components/Reports/ReportProblemButton';
 import Card, { CardHeader } from '@/Components/UI/Card';
 import StatusBadge from '@/Components/UI/StatusBadge';
 import DashboardLayout from '@/Layouts/DashboardLayout';
@@ -22,7 +23,7 @@ function Row({ label, children }) {
  * Détail d'une commande pour l'entreprise : articles, client, livraison, paiement, actions et
  * historique complet (chaque changement de statut, son auteur, sa note). Rafraîchi toutes les 10 s.
  */
-export default function Show({ order }) {
+export default function Show({ order, reporting }) {
     usePoll(10000, { only: ['order'] });
 
     return (
@@ -34,9 +35,12 @@ export default function Show({ order }) {
                 </div>
             }
             actions={
-                <Button href={route('business.orders.index')} variant="ghost" size="sm" icon={ArrowLeft}>
-                    Commandes
-                </Button>
+                <>
+                    <ReportProblemButton reporting={reporting} variant="outline" />
+                    <Button href={route('business.orders.index')} variant="ghost" size="sm" icon={ArrowLeft}>
+                        Commandes
+                    </Button>
+                </>
             }
         >
             <Head title={`Commande ${order.number}`} />

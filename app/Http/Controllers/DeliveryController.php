@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\User;
 use App\Services\CourierProfileService;
 use App\Services\OrderWorkflow;
+use App\Services\ReportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -85,11 +86,11 @@ class DeliveryController extends Controller
      * Course en cours (une seule à la fois) : étapes guidées, commerce, client, articles,
      * encaissement. Sans course active : état vide qui renvoie vers les offres.
      */
-    public function current(Request $request, CourierProfileService $courier): Response
+    public function current(Request $request, CourierProfileService $courier, ReportService $reports): Response
     {
         $user = $request->user();
         $order = $courier->activeOrders($user)->first()?->load([
-            'store:id,name,phone,neighborhood_id,address_landmarks',
+            'store:id,name,phone,neighborhood_id,address_landmarks,owner_id',
             'store.neighborhood:id,name',
             'neighborhood:id,name',
             'client:id,name,phone',
@@ -98,6 +99,8 @@ class DeliveryController extends Controller
 
         return Inertia::render('Delivery/Current', [
             'order' => $order ? $this->presentCurrent($order, $user) : null,
+            // « Signaler un problème » : le client ou le commerce de la course.
+            'reporting' => $order ? $reports->formFor($order, $user) : null,
         ]);
     }
 
@@ -105,7 +108,7 @@ class DeliveryController extends Controller
      * Historique : courses livrées (les plus récentes d'abord) et gains du jour, de la semaine
      * et du mois (journée de Libreville).
      */
-    public function history(Request $request, CourierProfileService $courier): Response
+    public function history(Request $request, CourierProfileService $courier, ReportService $reports): Response
     {
         $user = $request->user();
         $timezone = config('gogab.timezone');
@@ -113,7 +116,7 @@ class DeliveryController extends Controller
         $deliveries = Order::query()
             ->where('delivery_id', $user->id)
             ->where('status', OrderStatus::Delivered)
-            ->with(['store:id,name', 'neighborhood:id,name'])
+            ->with(['store:id,name,owner_id', 'store.owner:id,name,role', 'client:id,name,role', 'neighborhood:id,name'])
             ->latest('updated_at')
             ->latest('id')
             ->paginate(20)
@@ -127,6 +130,7 @@ class DeliveryController extends Controller
                 'neighborhood' => $order->neighborhood?->name,
                 'earning' => $order->delivery_fee,
                 'payment_method_label' => $order->payment_method->label(),
+                'reporting' => $reports->formFor($order, $user),
             ]);
 
         return Inertia::render('Delivery/History', [

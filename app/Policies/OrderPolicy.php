@@ -7,6 +7,7 @@ use App\Enums\Role;
 use App\Models\Order;
 use App\Models\User;
 use App\Services\OrderWorkflow;
+use App\Services\ReportService;
 
 /**
  * Qui voit quelle commande. Les changements de statut sont contrôlés par OrderWorkflow.
@@ -34,5 +35,14 @@ class OrderPolicy
                     && $order->delivery_id === null
                     && app(OrderWorkflow::class)->courierServesStore($user, $order)),
         };
+    }
+
+    /**
+     * « Signaler un problème » : seulement une partie de la commande (client, entreprise du
+     * commerce, livreur assigné), compte validé.
+     */
+    public function report(User $user, Order $order): bool
+    {
+        return $user->isApproved() && app(ReportService::class)->parties($order, $user)->isNotEmpty();
     }
 }

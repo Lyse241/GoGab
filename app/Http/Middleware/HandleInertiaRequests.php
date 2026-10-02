@@ -8,6 +8,7 @@ use App\Enums\PaymentMethod;
 use App\Models\Category;
 use App\Models\Neighborhood;
 use App\Models\Order;
+use App\Models\Report;
 use App\Models\User;
 use App\Services\CourierProfileService;
 use App\Services\ModerationService;
@@ -74,7 +75,11 @@ class HandleInertiaRequests extends Middleware
             'moderation' => fn () => $user ? $this->moderation($user) : null,
             // Compteurs affichés dans le menu de l'espace connecté (clé `badge` de Layouts/navigation.js).
             'badges' => fn () => match (true) {
-                $user?->isAdmin() && $user->isApproved() => ['pending_accounts' => User::awaitingValidation()->count()],
+                $user?->isAdmin() && $user->isApproved() => [
+                    'pending_accounts' => User::awaitingValidation()->count(),
+                    // Signalements à traiter (ouverts ou en cours d'examen).
+                    'open_reports' => Report::pending()->count(),
+                ],
                 // Entreprise : nouvelles commandes à accepter ou refuser.
                 $user?->isBusiness() && $user->isApproved() && $user->store !== null => [
                     'new_orders' => $user->store->orders()->where('status', OrderStatus::Pending)->count(),
