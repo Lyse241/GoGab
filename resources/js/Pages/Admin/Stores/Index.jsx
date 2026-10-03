@@ -1,5 +1,6 @@
 import ConfirmDeleteButton from '@/Components/ConfirmDeleteButton';
 import OpeningStatusBadge from '@/Components/OpeningStatusBadge';
+import Pagination from '@/Components/UI/Pagination';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import { imageUrl } from '@/utils/format';
 import { Head, Link } from '@inertiajs/react';
@@ -14,7 +15,7 @@ export default function Index({ stores }) {
                     </h2>
                     <Link
                         href={route('admin.stores.create')}
-                        className="rounded-full bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
+                        className="inline-flex min-h-tap items-center rounded-full bg-primary-600 px-4 text-sm font-semibold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                     >
                         + Nouvelle boutique
                     </Link>
@@ -24,13 +25,13 @@ export default function Index({ stores }) {
             <Head title="Boutiques" />
 
             <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                {stores.length === 0 ? (
+                {stores.data.length === 0 ? (
                     <p className="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-center text-sm text-gray-500">
                         Aucune boutique pour le moment.
                     </p>
                 ) : (
                     <ul className="divide-y divide-gray-100 rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
-                        {stores.map((store) => (
+                        {stores.data.map((store) => (
                             <li key={store.id} className="flex items-center gap-4 p-4">
                                 <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                                     {store.cover_image && (
@@ -57,7 +58,7 @@ export default function Index({ stores }) {
                                 <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-4">
                                     <Link
                                         href={route('admin.stores.edit', store.id)}
-                                        className="text-sm font-medium text-secondary hover:underline"
+                                        className="inline-flex min-h-tap items-center px-1 text-sm font-medium text-secondary hover:underline"
                                     >
                                         Modifier
                                     </Link>
@@ -71,6 +72,8 @@ export default function Index({ stores }) {
                         ))}
                     </ul>
                 )}
+
+                <Pagination paginator={stores} />
             </div>
         </DashboardLayout>
     );

@@ -23,7 +23,7 @@ const PasswordInput = forwardRef(function PasswordInput({ className, ...props },
                 onClick={() => setVisible((value) => !value)}
                 aria-label={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                 aria-pressed={visible}
-                className={`absolute right-1 inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                className={`tap-area absolute right-1 inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                     // Centré sur le champ (h-11) : libellé text-sm + mb-1.5 = 26 px au-dessus.
                     props.label ? 'top-[1.875rem]' : 'top-1'
                 }`}

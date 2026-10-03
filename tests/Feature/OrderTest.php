@@ -146,6 +146,30 @@ class OrderTest extends TestCase
         $this->assertSame('4500.00', $order->items()->where('product_id', $poulet->id)->value('price'));
     }
 
+    public function test_a_double_click_on_order_creates_a_single_order(): void
+    {
+        $poulet = $this->store->products()->create(['name' => 'Poulet', 'price' => 4500]);
+        $payload = $this->payload([['product_id' => $poulet->id, 'quantity' => 1]], ['checkout_token' => 'jeton-de-la-page-de-commande-01']);
+
+        $first = $this->actingAs($this->client)->post('/orders', $payload);
+        $second = $this->actingAs($this->client)->post('/orders', $payload);
+
+        $order = Order::sole();
+        $first->assertRedirect(route('orders.confirmation', $order, absolute: false));
+        $second->assertRedirect(route('orders.confirmation', $order, absolute: false));
+        $this->assertSame(1, $order->statusHistories()->count());
+        $this->assertCount(1, $this->owner->notifications);
+
+        // Un nouveau jeton (nouvelle visite de la page) : nouvelle commande.
+        $this->actingAs($this->client)->post('/orders', [...$payload, 'checkout_token' => 'jeton-de-la-page-de-commande-02']);
+        $this->assertSame(2, Order::count());
+
+        // Le jeton d'un autre client ne donne jamais accès à sa commande : il en crée une nouvelle.
+        $other = User::factory()->create(['role' => 'client']);
+        $this->actingAs($other)->post('/orders', $payload)->assertSessionHasNoErrors();
+        $this->assertSame(1, Order::where('client_id', $other->id)->count());
+    }
+
     public function test_confirmation_page_shows_number_and_tracking_link_data(): void
     {
         $product = $this->store->products()->create(['name' => 'Poulet', 'price' => 4500]);

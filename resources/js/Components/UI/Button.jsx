@@ -19,11 +19,12 @@ const variants = {
 };
 
 const sizes = {
-    sm: 'h-9 gap-1.5 px-3.5 text-sm',
+    // sm et icon-sm : 36 px visibles, zone tactile de 44 px (tap-area).
+    sm: 'tap-area h-9 gap-1.5 px-3.5 text-sm',
     md: 'h-11 gap-2 px-5 text-sm',
     lg: 'h-[3.25rem] gap-2 px-6 text-base',
     icon: 'h-11 w-11',
-    'icon-sm': 'h-9 w-9',
+    'icon-sm': 'tap-area h-9 w-9',
 };
 
 const iconSizes = {

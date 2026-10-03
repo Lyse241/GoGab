@@ -45,7 +45,7 @@ export default function NotificationItem({ notification, onClick, compact = fals
                 <span className={cn('mt-0.5 block text-sm text-gray-600', compact && 'line-clamp-2')}>
                     {notification.message}
                 </span>
-                <time dateTime={notification.created_at} className="mt-1 block text-xs text-gray-400">
+                <time dateTime={notification.created_at} className="mt-1 block text-xs text-gray-500">
                     {formatRelativeTime(notification.created_at)}
                 </time>
             </span>

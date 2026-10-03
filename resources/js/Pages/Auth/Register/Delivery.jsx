@@ -141,7 +141,7 @@ export default function Delivery({ neighborhoods, vehicleTypes, documentTypes, r
             footer={
                 <>
                     Déjà inscrit ?{' '}
-                    <Link href={route('login')} className="font-semibold text-primary-700 hover:underline">
+                    <Link href={route('login')} className="tap-area font-semibold text-primary-700 hover:underline">
                         Se connecter
                     </Link>
                 </>

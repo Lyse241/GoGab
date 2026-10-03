@@ -1,4 +1,6 @@
 import Badge from '@/Components/UI/Badge';
+import { SkeletonList } from '@/Components/UI/Skeleton';
+import useListLoading from '@/Hooks/useListLoading';
 import Card from '@/Components/UI/Card';
 import EmptyState from '@/Components/UI/EmptyState';
 import Pagination from '@/Components/UI/Pagination';
@@ -11,6 +13,7 @@ import { ShieldCheck } from 'lucide-react';
  * Journal des dernières actions de modération, filtrable par type, motif et administrateur.
  */
 export default function Index({ actions, filters, types, reasons, admins }) {
+    const listLoading = useListLoading();
     const filter = (key, value) =>
         router.get(
             route('admin.moderation.index'),
@@ -29,7 +32,9 @@ export default function Index({ actions, filters, types, reasons, admins }) {
                     <Select id="filter-admin" label="Administrateur" placeholder="Tous" options={admins} value={filters.admin ?? ''} onChange={(e) => filter('admin', e.target.value)} />
                 </div>
 
-                {actions.data.length === 0 ? (
+                {listLoading ? (
+                    <SkeletonList />
+                ) : actions.data.length === 0 ? (
                     <EmptyState icon={ShieldCheck} title="Aucune action de modération" description="Rien ne correspond à ces filtres." />
                 ) : (
                     <Card padding="none">

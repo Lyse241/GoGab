@@ -32,7 +32,7 @@ export default function ProductCard({ product, canOrder, quantity = 0, onAdd, on
                     <p className="mt-1 line-clamp-2 text-sm text-gray-500">{product.description}</p>
                 )}
                 <div className="mt-auto flex flex-wrap items-center gap-2 pt-2">
-                    <p className={cn('whitespace-nowrap font-bold', available ? 'text-primary-700' : 'text-gray-400')}>
+                    <p className={cn('whitespace-nowrap font-bold', available ? 'text-primary-700' : 'text-gray-500')}>
                         {formatFCFA(product.price)}
                     </p>
                     {!available && (

@@ -1,4 +1,6 @@
 import CourierCard from '@/Components/Business/CourierCard';
+import { SkeletonList } from '@/Components/UI/Skeleton';
+import useListLoading from '@/Hooks/useListLoading';
 import DeliveryAnnouncement from '@/Components/Business/DeliveryAnnouncement';
 import OrderActions from '@/Components/Business/OrderActions';
 import Card from '@/Components/UI/Card';
@@ -142,6 +144,7 @@ function OrderCard({ order }) {
  * livreur assigné avec bouton Appeler, toast + son à l'arrivée d'une commande.
  */
 export default function Index({ orders, tab, counts, pendingIds }) {
+    const listLoading = useListLoading();
     const toast = useToast();
     const notifications = useNotifications();
     const [sound, setSound] = useState(readSound);
@@ -205,7 +208,9 @@ export default function Index({ orders, tab, counts, pendingIds }) {
                     items={TABS.map((item) => ({ ...item, count: counts[item.value] }))}
                 />
 
-                {orders.data.length === 0 ? (
+                {listLoading ? (
+                    <SkeletonList />
+                ) : orders.data.length === 0 ? (
                     <EmptyState icon={ReceiptText} title="Rien pour le moment" description={EMPTY[tab]} />
                 ) : (
                     <div className="space-y-3">

@@ -65,7 +65,7 @@ function StoreHeader({ store }) {
                             <span className="inline-flex items-center gap-1 text-sm text-gray-600">
                                 <MapPin className="h-4 w-4 text-primary-600" aria-hidden="true" />
                                 {store.neighborhood}
-                                {store.zone && <span className="text-gray-400">· zone {store.zone}</span>}
+                                {store.zone && <span className="text-gray-500">· zone {store.zone}</span>}
                             </span>
                         )}
                     </div>
@@ -252,7 +252,7 @@ export default function Store({ store, products }) {
                                                 )}
                                             >
                                                 {section.name}
-                                                <span className={cn('ml-1.5 text-xs', active === section.id ? 'text-white/70' : 'text-gray-400')}>
+                                                <span className={cn('ml-1.5 text-xs', active === section.id ? 'text-white/70' : 'text-gray-500')}>
                                                     {section.items.length}
                                                 </span>
                                             </a>

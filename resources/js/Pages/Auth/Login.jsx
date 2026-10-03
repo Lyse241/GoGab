@@ -28,7 +28,7 @@ export default function Login({ status, canResetPassword }) {
             footer={
                 <>
                     Pas encore de compte ?{' '}
-                    <Link href={route('register')} className="font-semibold text-primary-700 hover:underline">
+                    <Link href={route('register')} className="tap-area font-semibold text-primary-700 hover:underline">
                         Créer un compte
                     </Link>
                 </>

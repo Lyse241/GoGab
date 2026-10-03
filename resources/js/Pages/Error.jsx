@@ -1,33 +1,45 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import Button from '@/Components/UI/Button';
 import { Head, Link } from '@inertiajs/react';
+import { ArrowLeft, Clock, House, Lock, RotateCw, SearchX, ServerCrash, Wrench } from 'lucide-react';
 
-const messages = {
+const MESSAGES = {
     403: {
+        icon: Lock,
         title: 'Accès refusé',
-        description: "Vous n'avez pas l'autorisation d'accéder à cette page.",
+        description: 'Cette page est réservée à un autre espace, ou à un autre compte.',
     },
     404: {
+        icon: SearchX,
         title: 'Page introuvable',
-        description:
-            "Cette page n'existe pas ou n'est plus disponible : la boutique ou la commande a peut-être été supprimée.",
+        description: 'Cette page n’existe pas ou n’est plus disponible : le commerce ou la commande a peut-être été retiré.',
+    },
+    419: {
+        icon: Clock,
+        title: 'Page expirée',
+        description: 'La page est restée ouverte trop longtemps. Rechargez-la puis recommencez.',
     },
     500: {
+        icon: ServerCrash,
         title: 'Erreur du serveur',
-        description:
-            'Un problème est survenu de notre côté. Réessayez dans quelques instants.',
+        description: 'Un problème est survenu de notre côté. Réessayez dans quelques instants.',
     },
     503: {
+        icon: Wrench,
         title: 'Service en maintenance',
         description: 'Gogab revient très vite. Merci de votre patience.',
     },
 };
 
 /**
- * Page d'erreur autonome : elle ne dépend pas des props partagées (auth…),
- * car une URL inexistante n'est pas passée par les middlewares web.
+ * Page d'erreur Gogab (403, 404, 419, 500, 503) : message clair, retour vers l'espace du rôle
+ * (`home`, calculé par le serveur : App\Support\ErrorPage), page précédente ou rechargement.
+ * Elle n'utilise pas les props partagées : une erreur peut survenir avant qu'elles existent.
  */
-export default function Error({ status }) {
-    const { title, description } = messages[status] ?? messages[500];
+export default function Error({ status, home }) {
+    const { icon: Icon, title, description } = MESSAGES[status] ?? MESSAGES[500];
+    const back = home ?? { url: '/', label: 'Retour à l’accueil' };
+    const canGoBack = typeof window !== 'undefined' && window.history.length > 1;
 
     return (
         <div className="flex min-h-screen flex-col bg-gray-50">
@@ -35,7 +47,7 @@ export default function Error({ status }) {
 
             <header className="bg-secondary shadow-md">
                 <div className="mx-auto flex h-14 max-w-6xl items-center px-4 sm:px-6">
-                    <Link href="/" className="text-2xl" aria-label="Gogab, accueil">
+                    <Link href="/" className="rounded-lg text-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent" aria-label="Gogab, accueil">
                         <ApplicationLogo light />
                     </Link>
                 </div>
@@ -43,15 +55,34 @@ export default function Error({ status }) {
 
             <main className="flex flex-1 items-center justify-center px-4 py-12">
                 <div className="max-w-md text-center">
-                    <p className="text-7xl font-extrabold text-primary">{status}</p>
-                    <h1 className="mt-4 text-2xl font-bold text-secondary">{title}</h1>
+                    <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary-50 text-primary-600">
+                        <Icon className="h-8 w-8" aria-hidden="true" />
+                    </span>
+                    <p className="mt-4 text-6xl font-extrabold text-primary-600">{status}</p>
+                    <h1 className="mt-2 text-2xl font-bold text-secondary-900">{title}</h1>
                     <p className="mt-2 text-gray-600">{description}</p>
-                    <Link
-                        href="/"
-                        className="mt-8 inline-block rounded-full bg-primary-600 px-6 py-3 font-semibold text-white hover:bg-primary-700"
-                    >
-                        Retour aux boutiques
-                    </Link>
+
+                    <div className="mt-8 flex flex-col items-center justify-center gap-2 sm:flex-row">
+                        {status === 419 ? (
+                            <Button icon={RotateCw} onClick={() => window.location.reload()}>
+                                Recharger la page
+                            </Button>
+                        ) : (
+                            // Lien classique : repart d'une page complète (props partagées à jour).
+                            <a
+                                href={back.url}
+                                className="inline-flex h-11 items-center gap-2 rounded-full bg-primary-600 px-5 text-sm font-semibold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                            >
+                                <House className="h-5 w-5" aria-hidden="true" />
+                                {back.label}
+                            </a>
+                        )}
+                        {canGoBack && (
+                            <Button variant="ghost" icon={ArrowLeft} onClick={() => window.history.back()}>
+                                Page précédente
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </main>
         </div>

@@ -1,4 +1,6 @@
 import { StoreThumb } from '@/Components/Cart/CartList';
+import { SkeletonList } from '@/Components/UI/Skeleton';
+import useListLoading from '@/Hooks/useListLoading';
 import Button from '@/Components/UI/Button';
 import EmptyState from '@/Components/UI/EmptyState';
 import Pagination from '@/Components/UI/Pagination';
@@ -14,6 +16,7 @@ import { ChevronRight, ReceiptText } from 'lucide-react';
  * total, statut), pagination.
  */
 export default function Index({ orders, tab, counts }) {
+    const listLoading = useListLoading();
     const changeTab = (value) =>
         router.get(route('orders.index'), value === 'finished' ? { tab: value } : {}, { preserveScroll: true, only: ['orders', 'tab', 'counts'] });
 
@@ -35,7 +38,9 @@ export default function Index({ orders, tab, counts }) {
                     ]}
                 />
 
-                {orders.data.length === 0 ? (
+                {listLoading ? (
+                    <SkeletonList />
+                ) : orders.data.length === 0 ? (
                     <EmptyState
                         className="mt-5"
                         icon={ReceiptText}

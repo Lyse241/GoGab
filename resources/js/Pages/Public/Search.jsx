@@ -1,4 +1,6 @@
 import SearchBar from '@/Components/Layout/SearchBar';
+import { SkeletonCard } from '@/Components/UI/Skeleton';
+import useListLoading from '@/Hooks/useListLoading';
 import LazyImage from '@/Components/LazyImage';
 import OpeningStatusBadge from '@/Components/OpeningStatusBadge';
 import ProductCard from '@/Components/ProductCard';
@@ -53,6 +55,7 @@ function StoreResult({ store }) {
  */
 export default function Search({ q, stores, productGroups, minLength }) {
     const cart = useCart();
+    const listLoading = useListLoading();
 
     const productCount = productGroups.reduce((sum, group) => sum + group.products.length, 0);
     const tooShort = q.length < minLength;
@@ -79,7 +82,16 @@ export default function Search({ q, stores, productGroups, minLength }) {
                 )}
             </div>
 
-            {tooShort && (
+            {/* Nouvelle recherche en cours : squelettes à la place des anciens résultats. */}
+            {listLoading && (
+                <div className="mt-6 grid gap-3 md:grid-cols-2">
+                    {[0, 1, 2, 3].map((index) => (
+                        <SkeletonCard key={index} />
+                    ))}
+                </div>
+            )}
+
+            {!listLoading && tooShort && (
                 <EmptyState
                     className="mt-6"
                     icon={SearchIcon}
@@ -88,7 +100,7 @@ export default function Search({ q, stores, productGroups, minLength }) {
                 />
             )}
 
-            {nothing && (
+            {!listLoading && nothing && (
                 <EmptyState
                     className="mt-6"
                     icon={SearchX}
@@ -102,7 +114,7 @@ export default function Search({ q, stores, productGroups, minLength }) {
                 />
             )}
 
-            {stores.length > 0 && (
+            {!listLoading && stores.length > 0 && (
                 <section aria-labelledby="stores-results" className="mt-8">
                     <h2 id="stores-results" className="mb-3 text-lg font-bold text-secondary-900">
                         Commerces
@@ -115,7 +127,7 @@ export default function Search({ q, stores, productGroups, minLength }) {
                 </section>
             )}
 
-            {productGroups.length > 0 && (
+            {!listLoading && productGroups.length > 0 && (
                 <section aria-labelledby="products-results" className="mt-10">
                     <h2 id="products-results" className="mb-3 text-lg font-bold text-secondary-900">
                         Produits

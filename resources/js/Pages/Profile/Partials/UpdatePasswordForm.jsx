@@ -1,7 +1,7 @@
 import Button from '@/Components/UI/Button';
 import Card, { CardHeader } from '@/Components/UI/Card';
 import PasswordInput from '@/Components/UI/PasswordInput';
-import { focusFirstError } from '@/utils/focusFirstError';
+import { focusFirstError } from '@/Components/FormErrors';
 import { useForm } from '@inertiajs/react';
 import { KeyRound } from 'lucide-react';
 

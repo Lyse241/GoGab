@@ -202,3 +202,7 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+// URL inconnue : 404 Gogab, en passant par les middlewares web (session, compte connecté,
+// props partagées) pour proposer le bon bouton de retour selon le rôle.
+Route::fallback(fn () => abort(404));

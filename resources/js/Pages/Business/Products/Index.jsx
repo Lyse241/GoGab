@@ -136,7 +136,7 @@ export default function Index({ products, sections, filters, noSection, totals }
                         />
 
                         {sections.length > 0 && (
-                            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0" role="group" aria-label="Filtrer par section">
+                            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1 sm:mx-0 sm:flex-wrap sm:px-0" role="group" aria-label="Filtrer par section">
                                 {[{ value: '', label: 'Toutes' }, ...sections.map((s) => ({ value: s, label: s })), { value: noSection, label: 'Sans section' }].map(({ value, label }) => (
                                     <button
                                         key={value || 'all'}
@@ -144,7 +144,7 @@ export default function Index({ products, sections, filters, noSection, totals }
                                         onClick={() => applyFilters({ section: value, q: search.trim() })}
                                         aria-pressed={filters.section === value}
                                         className={cn(
-                                            'h-9 shrink-0 rounded-full px-4 text-sm font-semibold ring-1 ring-inset transition',
+                                            'tap-area h-9 shrink-0 rounded-full px-4 text-sm font-semibold ring-1 ring-inset transition',
                                             filters.section === value
                                                 ? 'bg-secondary text-white ring-secondary'
                                                 : 'bg-white text-gray-700 ring-gray-200 hover:bg-gray-50',
@@ -180,7 +180,7 @@ export default function Index({ products, sections, filters, noSection, totals }
                                 <section key={section} aria-labelledby={`section-${section}`}>
                                     <h2 id={`section-${section}`} className="mb-2 flex items-baseline gap-2 px-1 text-sm font-bold uppercase tracking-wide text-gray-500">
                                         {section}
-                                        <span className="font-medium normal-case tracking-normal text-gray-400">({items.length})</span>
+                                        <span className="font-medium normal-case tracking-normal text-gray-500">({items.length})</span>
                                     </h2>
                                     <Card padding="none">
                                         <ul className="divide-y divide-gray-100">

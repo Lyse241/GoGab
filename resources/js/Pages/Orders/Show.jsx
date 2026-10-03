@@ -50,7 +50,7 @@ function Timeline({ steps }) {
                                 step.state === 'done' && 'bg-primary-600 text-white',
                                 step.state === 'current' && !stopped && 'bg-primary-600 text-white ring-4 ring-primary-100',
                                 step.state === 'current' && stopped && 'bg-danger-600 text-white ring-4 ring-danger-100',
-                                step.state === 'upcoming' && 'bg-white text-gray-300 ring-2 ring-gray-200',
+                                step.state === 'upcoming' && 'bg-white text-gray-500 ring-2 ring-gray-200',
                             )}
                             aria-hidden="true"
                         >
@@ -68,7 +68,7 @@ function Timeline({ steps }) {
                             <p
                                 className={cn(
                                     'text-sm',
-                                    step.state === 'upcoming' ? 'text-gray-400' : 'font-semibold text-gray-900',
+                                    step.state === 'upcoming' ? 'text-gray-500' : 'font-semibold text-gray-900',
                                     step.state === 'current' && (stopped ? 'text-danger-700' : 'text-primary-800'),
                                 )}
                             >

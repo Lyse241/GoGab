@@ -38,3 +38,24 @@ export function SkeletonCard({ className }) {
         </div>
     );
 }
+
+/**
+ * Liste en cours de chargement (commandes, comptes, notifications…) : lignes avec pastille,
+ * titre et texte. Annoncée aux lecteurs d'écran.
+ */
+export function SkeletonList({ rows = 4, className }) {
+    return (
+        <div className={cn('divide-y divide-gray-100 rounded-2xl bg-white ring-1 ring-gray-200', className)} role="status" aria-label="Chargement…">
+            {Array.from({ length: rows }, (_, index) => (
+                <div key={index} className="flex items-center gap-3 p-4">
+                    <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                        <Skeleton className="h-4 w-1/3" />
+                        <Skeleton className="h-3 w-2/3" />
+                    </div>
+                    <Skeleton className="h-6 w-16 shrink-0 rounded-full" />
+                </div>
+            ))}
+        </div>
+    );
+}

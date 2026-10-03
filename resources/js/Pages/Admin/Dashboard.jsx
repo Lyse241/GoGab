@@ -29,7 +29,7 @@ function StatCard({ icon: Icon, label, value, hint, href, highlight }) {
             {href && <ChevronRight className="h-5 w-5 shrink-0 text-gray-400" aria-hidden="true" />}
         </>
     );
-    const classes = cn('flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1', highlight ? 'bg-accent-50 ring-accent-300' : 'ring-gray-200');
+    const classes = cn('flex min-w-0 items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1', highlight ? 'bg-accent-50 ring-accent-300' : 'ring-gray-200');
 
     return href ? (
         <Link href={href} className={cn(classes, 'transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary')}>
@@ -100,10 +100,10 @@ export default function Dashboard({ stats, week, byStatus, events, stuckMinutes 
 
                     <Card>
                         <CardHeader title="Répartition par statut" description={`${totalByStatus} commande${totalByStatus > 1 ? 's' : ''} au total`} />
-                        <ul className="space-y-2.5">
+                        <ul className="space-y-1">
                             {byStatus.map((item) => (
                                 <li key={item.value}>
-                                    <Link href={route('admin.orders.index', { status: item.value })} className="group block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                                    <Link href={route('admin.orders.index', { status: item.value })} className="group block min-h-tap rounded-lg py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                                         <span className="flex items-center justify-between gap-2 text-sm">
                                             <StatusBadge status={item.value} size="sm" />
                                             <span className="font-semibold tabular-nums text-gray-900 group-hover:underline">{item.count}</span>

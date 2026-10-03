@@ -56,7 +56,7 @@ export default function Stepper({ steps, current, className }) {
                                     'relative z-10 flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold transition',
                                     done && 'bg-primary text-white',
                                     active && 'bg-white text-primary-700 ring-4 ring-primary',
-                                    !done && !active && 'bg-white text-gray-400 ring-2 ring-gray-200',
+                                    !done && !active && 'bg-white text-gray-500 ring-2 ring-gray-200',
                                 )}
                             >
                                 {done ? <Check className="h-5 w-5" aria-hidden="true" /> : index + 1}
@@ -64,7 +64,7 @@ export default function Stepper({ steps, current, className }) {
                             <span
                                 className={cn(
                                     'mt-2 px-1 text-sm font-medium',
-                                    active ? 'text-secondary-900' : done ? 'text-gray-700' : 'text-gray-400',
+                                    active ? 'text-secondary-900' : done ? 'text-gray-700' : 'text-gray-500',
                                 )}
                             >
                                 {step.label}

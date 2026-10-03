@@ -16,6 +16,7 @@ import { cartTotals } from '@/utils/cartTotals';
 import { cn } from '@/utils/cn';
 import { formatFCFA, imageUrl } from '@/utils/format';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { useRef, useState } from 'react';
 import { Banknote, Check, CircleAlert, Clock, Hourglass, MapPin, ShoppingBag, Smartphone } from 'lucide-react';
 
 const LANDMARKS_MIN = 10;
@@ -84,6 +85,19 @@ function PaymentCard({ method, selected, onSelect }) {
  * commerce, adresse (préremplie depuis le profil), paiement, montant remis en espèces avec la
  * monnaie à rendre, sous-total + frais + total. Seul le panier de ce commerce est envoyé et vidé.
  */
+/**
+ * Jeton aléatoire (crypto.randomUUID n'existe qu'en HTTPS ou sur localhost : repli pour un
+ * téléphone qui teste l'app sur le réseau local en HTTP).
+ */
+function newCheckoutToken() {
+    if (window.crypto?.randomUUID) {
+        return window.crypto.randomUUID();
+    }
+    const bytes = window.crypto?.getRandomValues ? window.crypto.getRandomValues(new Uint8Array(16)) : Array.from({ length: 16 }, () => Math.floor(Math.random() * 256));
+
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
 export default function Index({ store, address, neighborhoods, paymentMethods, deliveryFee, quickCashAmounts, canOrder }) {
     const carts = useCart();
     const cart = carts.cartOf(store.id) ?? { store, items: [] };
@@ -109,6 +123,11 @@ export default function Index({ store, address, neighborhoods, paymentMethods, d
         client_note: '',
     });
 
+    // Jeton unique de cette page : le serveur ne crée jamais deux commandes pour le même jeton
+    // (double clic, réseau lent, formulaire renvoyé). Le verrou bloque le second clic tout de suite.
+    const [checkoutToken] = useState(newCheckoutToken);
+    const submitting = useRef(false);
+
     const update = (field, value) => {
         setData(field, value);
         clearErrors(field);
@@ -120,7 +139,7 @@ export default function Index({ store, address, neighborhoods, paymentMethods, d
 
     const submit = (event) => {
         event.preventDefault();
-        if (blocked) {
+        if (blocked || submitting.current) {
             return;
         }
 
@@ -135,13 +154,18 @@ export default function Index({ store, address, neighborhoods, paymentMethods, d
         transform((values) => ({
             ...values,
             store_id: store.id,
+            checkout_token: checkoutToken,
             cash_given: values.payment_method === 'cash' ? values.cash_given : null,
             items: cart.items.map((item) => ({ product_id: item.product_id, quantity: item.quantity })),
         }));
 
+        submitting.current = true;
         post(route('orders.store'), {
             // Seul le panier de ce commerce est vidé, une fois la commande enregistrée.
             onSuccess: () => carts.clearCart(store.id),
+            onFinish: () => {
+                submitting.current = false;
+            },
             onError: focusFirstError,
         });
     };
@@ -189,10 +213,10 @@ export default function Index({ store, address, neighborhoods, paymentMethods, d
                                 return (
                                     <li key={item.product_id} className="flex items-center gap-3 py-2.5">
                                         <LazyImage src={imageUrl(item.image)} alt="" className={cn('h-11 w-11 shrink-0 rounded-lg', unavailable && 'opacity-50 grayscale')} />
-                                        <span className={cn('min-w-0 flex-1 text-sm', unavailable ? 'text-gray-400 line-through' : 'text-gray-800')}>
+                                        <span className={cn('min-w-0 flex-1 text-sm', unavailable ? 'text-gray-500 line-through' : 'text-gray-800')}>
                                             <span className="font-semibold">{item.quantity} ×</span> {item.name}
                                         </span>
-                                        <span className={cn('shrink-0 text-sm font-medium', unavailable ? 'text-gray-400 line-through' : 'text-gray-900')}>
+                                        <span className={cn('shrink-0 text-sm font-medium', unavailable ? 'text-gray-500 line-through' : 'text-gray-900')}>
                                             {formatFCFA(item.price * item.quantity)}
                                         </span>
                                     </li>

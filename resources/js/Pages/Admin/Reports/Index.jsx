@@ -1,4 +1,6 @@
 import Badge from '@/Components/UI/Badge';
+import { SkeletonList } from '@/Components/UI/Skeleton';
+import useListLoading from '@/Hooks/useListLoading';
 import Card from '@/Components/UI/Card';
 import EmptyState from '@/Components/UI/EmptyState';
 import Pagination from '@/Components/UI/Pagination';
@@ -13,6 +15,7 @@ import { ChevronRight, Flag, ShieldCheck, Siren } from 'lucide-react';
  * traiter en tête avec le badge « Urgent ». Chaque ligne mène au détail.
  */
 export default function Index({ reports, filters, statuses, reasons, types }) {
+    const listLoading = useListLoading();
     const filter = (key, value) =>
         router.get(
             route('admin.reports.index'),
@@ -31,7 +34,9 @@ export default function Index({ reports, filters, statuses, reasons, types }) {
                     <Select id="filter-type" label="Compte signalé" placeholder="Tous les comptes" options={types} value={filters.type ?? ''} onChange={(e) => filter('type', e.target.value)} />
                 </div>
 
-                {reports.data.length === 0 ? (
+                {listLoading ? (
+                    <SkeletonList />
+                ) : reports.data.length === 0 ? (
                     <EmptyState icon={ShieldCheck} title="Aucun signalement" description="Rien ne correspond à ces filtres." />
                 ) : (
                     <Card padding="none">

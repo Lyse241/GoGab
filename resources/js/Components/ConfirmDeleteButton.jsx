@@ -26,7 +26,7 @@ export default function ConfirmDeleteButton({ url, title, message, className, ch
             <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className={cn('min-h-9 text-sm font-medium text-danger-600 hover:underline', className)}
+                className={cn('tap-area min-h-9 text-sm font-medium text-danger-600 hover:underline', className)}
             >
                 {children}
             </button>

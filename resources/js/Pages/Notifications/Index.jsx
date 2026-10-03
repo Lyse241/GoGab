@@ -1,4 +1,6 @@
 import NotificationItem from '@/Components/NotificationItem';
+import { SkeletonList } from '@/Components/UI/Skeleton';
+import useListLoading from '@/Hooks/useListLoading';
 import Button from '@/Components/UI/Button';
 import Card from '@/Components/UI/Card';
 import EmptyState from '@/Components/UI/EmptyState';
@@ -29,6 +31,7 @@ const empty = {
 };
 
 export default function Index({ notifications, filter, counts }) {
+    const listLoading = useListLoading();
     const { markRead, markAllRead, open, unreadCount } = useNotifications();
 
     // La cloche détecte une nouvelle notification : on met la liste à jour.
@@ -88,7 +91,9 @@ export default function Index({ notifications, filter, counts }) {
                     ]}
                 />
 
-                {notifications.data.length === 0 ? (
+                {listLoading ? (
+                    <SkeletonList />
+                ) : notifications.data.length === 0 ? (
                     <EmptyState
                         icon={state.icon}
                         title={state.title}

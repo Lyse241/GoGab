@@ -10,4 +10,45 @@
     .no-scrollbar::-webkit-scrollbar {
         display: none;
     }
+
+    /* Zone tactile d'au moins 44 × 44 px autour d'un petit bouton ou lien, sans changer son
+       apparence (pseudo-élément invisible centré sur l'élément). */
+    /* Spécificité nulle : une classe absolute / fixed posée sur l'élément l'emporte toujours. */
+    :where(.tap-area) {
+        position: relative;
+    }
+    .tap-area::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: max(100%, 2.75rem);
+        height: max(100%, 2.75rem);
+        transform: translate(-50%, -50%);
+    }
+}
+
+@layer base {
+    /* Pas de défilement horizontal de la page, quelle que soit la largeur (375 px compris). */
+    html,
+    body {
+        overflow-x: clip;
+    }
+
+    /* Ancres (sections de la page commerce) sous le header collant. */
+    html {
+        scroll-padding-top: calc(var(--header-h, 4rem) + 1rem);
+    }
+
+    /* Préférence « réduire les animations » : transitions et animations quasi instantanées. */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
+    }
 }

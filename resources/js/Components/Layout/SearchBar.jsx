@@ -62,7 +62,7 @@ export default function SearchBar({ className, size = 'md', placeholder = 'Resta
                 <button
                     type="button"
                     onClick={() => setQuery('')}
-                    className="absolute right-2 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-gray-500 hover:bg-gray-200"
+                    className="tap-area absolute right-2 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-gray-500 hover:bg-gray-200"
                     aria-label="Effacer la recherche"
                 >
                     <X className="h-4 w-4" aria-hidden="true" />

@@ -69,7 +69,7 @@ export default function Field({ id, label, hint, error, required, className, chi
  */
 export function controlClasses(error, className) {
     return cn(
-        'block w-full rounded-xl border bg-white text-base text-gray-900 shadow-sm transition placeholder:text-gray-400 sm:text-sm',
+        'block w-full rounded-xl border bg-white text-base text-gray-900 shadow-sm transition placeholder:text-gray-500 sm:text-sm',
         'focus:outline-none focus:ring-2 focus:ring-offset-0',
         'disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500',
         error

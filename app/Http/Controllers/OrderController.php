@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Services\OrderWorkflow;
 use App\Services\ReportService;
 use App\Support\OrderTimeline;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -28,10 +29,35 @@ class OrderController extends Controller
         // le montant affiché dans le navigateur n'est jamais utilisé.
         $quote = $request->quote();
         $paymentMethod = PaymentMethod::from($request->validated('payment_method'));
+        $token = $request->validated('checkout_token');
+
+        // Double clic sur « Commander » (ou formulaire renvoyé) : la commande existe déjà.
+        $existing = fn (): ?Order => $token
+            ? Order::where('client_id', $request->user()->id)->where('checkout_token', $token)->first()
+            : null;
+        if ($order = $existing()) {
+            return redirect()->route('orders.confirmation', $order);
+        }
 
         // Statut initial, lignes à prix figés, historique et notification de l'entreprise, dans
-        // une transaction : OrderWorkflow::place().
-        $order = $workflow->place($request->user(), [
+        // une transaction : OrderWorkflow::place(). Deux envois simultanés : l'index unique sur
+        // checkout_token fait échouer le second, qui renvoie vers la commande créée par le premier.
+        try {
+            $order = $this->placeOrder($request, $workflow, $quote, $paymentMethod, $token);
+        } catch (UniqueConstraintViolationException $exception) {
+            $order = $existing() ?? throw $exception;
+        }
+
+        return redirect()->route('orders.confirmation', $order);
+    }
+
+    /**
+     * @param  array{items: list<array<string, mixed>>, subtotal: float, delivery_fee: int, total: float}  $quote
+     */
+    private function placeOrder(StoreOrderRequest $request, OrderWorkflow $workflow, array $quote, PaymentMethod $paymentMethod, ?string $token): Order
+    {
+        return $workflow->place($request->user(), [
+            'checkout_token' => $token,
             'store_id' => $request->store()->id,
             'neighborhood_id' => $request->validated('neighborhood_id'),
             'address_landmarks' => trim($request->validated('address_landmarks')),
@@ -42,8 +68,6 @@ class OrderController extends Controller
             'cash_given' => $paymentMethod === PaymentMethod::Cash ? $request->validated('cash_given') : null,
             'client_note' => $request->validated('client_note'),
         ], $quote['items']);
-
-        return redirect()->route('orders.confirmation', $order);
     }
 
     /**

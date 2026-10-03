@@ -24,6 +24,7 @@ class Order extends Model
      */
     protected $fillable = [
         'reference',
+        'checkout_token',
         'store_id',
         'client_id',
         'delivery_id',

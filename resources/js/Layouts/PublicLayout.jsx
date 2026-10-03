@@ -67,7 +67,7 @@ export default function PublicLayout({
                 <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:gap-4 sm:px-6">
                     <Link
                         href={route('home')}
-                        className="shrink-0 rounded-lg text-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        className="inline-flex min-h-tap shrink-0 items-center rounded-lg text-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                         aria-label="Gogab, accueil"
                     >
                         <ApplicationLogo />

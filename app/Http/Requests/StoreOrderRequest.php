@@ -57,6 +57,8 @@ class StoreOrderRequest extends FormRequest
             // livraison, ignoré pour le Mobile Money.
             'cash_given' => ['exclude_unless:payment_method,'.PaymentMethod::Cash->value, 'required', 'integer', 'min:1', 'max:10000000'],
             'client_note' => ['nullable', 'string', 'max:500'],
+            // Jeton de la page de commande : un second envoi renvoie la même commande.
+            'checkout_token' => ['nullable', 'string', 'min:16', 'max:64'],
             'items' => ['required', 'array', 'min:1', 'max:50'],
             'items.*.product_id' => ['required', 'integer', 'distinct'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:99'],

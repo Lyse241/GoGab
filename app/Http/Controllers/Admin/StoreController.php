@@ -19,11 +19,13 @@ class StoreController extends Controller
     public function index(): Response
     {
         return Inertia::render('Admin/Stores/Index', [
-            'stores' => Store::with(['category:id,name', 'openingHours'])
+            'stores' => Store::with(['category:id,name', 'openingHours', 'owner:id,account_status'])
                 ->withCount('products')
                 ->orderBy('name')
-                ->get(['id', 'name', 'category_id', 'cover_image', 'is_open', 'is_active'])
-                ->map(fn (Store $store) => [
+                ->orderBy('id')
+                ->paginate(20, ['id', 'name', 'category_id', 'owner_id', 'cover_image', 'is_open', 'is_active'])
+                ->withQueryString()
+                ->through(fn (Store $store) => [
                     'id' => $store->id,
                     'name' => $store->name,
                     'category' => $store->category->name,

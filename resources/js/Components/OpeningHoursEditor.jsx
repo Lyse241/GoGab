@@ -107,7 +107,7 @@ export default function OpeningHoursEditor({ value, onChange, errors = {}, name 
                         <li key={day.day_of_week} className="p-3 sm:px-4">
                             <div className="grid gap-x-4 gap-y-2 sm:grid-cols-[7rem_1fr_auto] sm:items-center">
                                 <div className="flex items-center justify-between gap-2 sm:block">
-                                    <span className={cn('font-semibold', day.is_closed ? 'text-gray-400' : 'text-secondary-900')}>
+                                    <span className={cn('font-semibold', day.is_closed ? 'text-gray-500' : 'text-secondary-900')}>
                                         {dayName}
                                     </span>
                                     {/* Mobile : case à droite du jour */}

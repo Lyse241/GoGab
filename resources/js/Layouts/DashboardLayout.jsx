@@ -76,7 +76,7 @@ export default function DashboardLayout({ header, actions, children }) {
                 <div className="flex h-16 items-center px-6">
                     <Link
                         href={route('dashboard')}
-                        className="rounded-lg text-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        className="inline-flex min-h-tap items-center rounded-lg text-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                         aria-label="Gogab, mon espace"
                     >
                         <ApplicationLogo light />
@@ -148,7 +148,7 @@ export default function DashboardLayout({ header, actions, children }) {
                     <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:px-6 lg:px-8">
                         <Link
                             href={route('dashboard')}
-                            className="rounded-lg text-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:hidden"
+                            className="inline-flex min-h-tap items-center rounded-lg text-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:hidden"
                             aria-label="Gogab, mon espace"
                         >
                             <ApplicationLogo />

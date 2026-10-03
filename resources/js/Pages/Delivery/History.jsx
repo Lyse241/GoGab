@@ -1,4 +1,6 @@
 import ReportProblemButton from '@/Components/Reports/ReportProblemButton';
+import { SkeletonList } from '@/Components/UI/Skeleton';
+import useListLoading from '@/Hooks/useListLoading';
 import Button from '@/Components/UI/Button';
 import Card from '@/Components/UI/Card';
 import EmptyState from '@/Components/UI/EmptyState';
@@ -22,6 +24,7 @@ function Total({ label, value, highlight }) {
  * semaine et du mois (heure de Libreville).
  */
 export default function History({ deliveries, earnings }) {
+    const listLoading = useListLoading();
     return (
         <DeliveryLayout title="Historique" subtitle="Vos courses livrées et vos gains" availability={false}>
             <Head title="Historique" />
@@ -32,7 +35,9 @@ export default function History({ deliveries, earnings }) {
                 <Total label="Ce mois" value={earnings.month} />
             </section>
 
-            {deliveries.data.length === 0 ? (
+            {listLoading ? (
+                    <SkeletonList />
+                ) : deliveries.data.length === 0 ? (
                 <EmptyState
                     icon={HistoryIcon}
                     title="Aucune course livrée"

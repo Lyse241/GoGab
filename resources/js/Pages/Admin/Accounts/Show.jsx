@@ -20,7 +20,7 @@ function Row({ label, value }) {
     return (
         <div className="flex flex-col gap-0.5 py-2 sm:flex-row sm:justify-between sm:gap-6">
             <dt className="text-sm text-gray-500">{label}</dt>
-            <dd className="text-sm font-medium text-gray-900 sm:text-right">{value || <span className="text-gray-400">—</span>}</dd>
+            <dd className="text-sm font-medium text-gray-900 sm:text-right">{value || <span className="text-gray-500">—</span>}</dd>
         </div>
     );
 }

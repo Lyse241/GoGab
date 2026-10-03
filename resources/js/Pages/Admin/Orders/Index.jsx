@@ -1,4 +1,6 @@
 import Badge from '@/Components/UI/Badge';
+import { SkeletonList } from '@/Components/UI/Skeleton';
+import useListLoading from '@/Hooks/useListLoading';
 import Button from '@/Components/UI/Button';
 import Card from '@/Components/UI/Card';
 import EmptyState from '@/Components/UI/EmptyState';
@@ -20,6 +22,7 @@ const clean = (filters) => Object.fromEntries(Object.entries(filters).filter(([,
  * commandes bloquées en recherche de livreur mises en évidence, export CSV des résultats.
  */
 export default function Index({ orders, filters, statuses, stores, stuckCount, stuckMinutes }) {
+    const listLoading = useListLoading();
     const { errors } = usePage().props;
     const [reference, setReference] = useState(filters.q ?? '');
 
@@ -40,7 +43,7 @@ export default function Index({ orders, filters, statuses, stores, stuckCount, s
                 // Lien classique (pas Inertia) : le navigateur télécharge le fichier.
                 <a
                     href={route('admin.orders.export', clean(filters))}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-full border border-gray-300 bg-white px-3.5 text-sm font-semibold text-gray-800 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                    className="tap-area inline-flex h-9 items-center gap-1.5 rounded-full border border-gray-300 bg-white px-3.5 text-sm font-semibold text-gray-800 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 >
                     <Download className="h-4 w-4" aria-hidden="true" />
                     Exporter en CSV
@@ -109,7 +112,9 @@ export default function Index({ orders, filters, statuses, stores, stuckCount, s
                     )}
                 </Card>
 
-                {orders.data.length === 0 ? (
+                {listLoading ? (
+                    <SkeletonList />
+                ) : orders.data.length === 0 ? (
                     <EmptyState icon={ReceiptText} title="Aucune commande" description={hasFilters ? 'Aucune commande ne correspond à ces filtres.' : 'Les commandes apparaîtront ici.'} />
                 ) : (
                     <Card padding="none" className="overflow-hidden">

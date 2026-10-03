@@ -29,7 +29,7 @@ export default function GuestLayout({ title, subtitle, width = 'sm', footer, chi
                 <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
                     <Link
                         href={route('home')}
-                        className="rounded-lg text-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        className="inline-flex min-h-tap items-center rounded-lg text-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                         aria-label="Gogab, accueil"
                     >
                         <ApplicationLogo />

@@ -1,4 +1,6 @@
 import { Avatar } from '@/Components/Layout/UserMenu';
+import { SkeletonList } from '@/Components/UI/Skeleton';
+import useListLoading from '@/Hooks/useListLoading';
 import Badge from '@/Components/UI/Badge';
 import Button from '@/Components/UI/Button';
 import Card from '@/Components/UI/Card';
@@ -69,6 +71,7 @@ function TypeBadge({ account }) {
 }
 
 export default function Index({ page, accounts, filters, counts, flaggedCount, types }) {
+    const listLoading = useListLoading();
     const directory = page.mode === 'directory';
     const [query, setQuery] = useState(filters.q ?? '');
     const firstRender = useRef(true);
@@ -186,7 +189,9 @@ export default function Index({ page, accounts, filters, counts, flaggedCount, t
                     </div>
                 </div>
 
-                {accounts.data.length === 0 ? (
+                {listLoading ? (
+                    <SkeletonList />
+                ) : accounts.data.length === 0 ? (
                     <EmptyState
                         icon={filtered ? Search : directory ? Users : UserCheck}
                         title={filtered ? 'Aucun résultat' : empty.title}

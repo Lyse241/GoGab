@@ -50,7 +50,7 @@ function CartLine({ item, unavailable, onQuantityChange, onRemove }) {
                     ) : (
                         <QuantityStepper quantity={item.quantity} label={item.name} onChange={onQuantityChange} />
                     )}
-                    <p className={cn('font-semibold', unavailable ? 'text-gray-400 line-through' : 'text-gray-900')}>
+                    <p className={cn('font-semibold', unavailable ? 'text-gray-500 line-through' : 'text-gray-900')}>
                         {formatFCFA(item.price * item.quantity)}
                     </p>
                 </div>

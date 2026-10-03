@@ -174,7 +174,7 @@ export default function FileUpload({
                             <button
                                 type="button"
                                 onClick={() => inputRef.current?.click()}
-                                className="inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-secondary hover:underline"
+                                className="tap-area inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-secondary hover:underline"
                             >
                                 <ImageUp className="h-4 w-4" aria-hidden="true" />
                                 Remplacer
@@ -183,7 +183,7 @@ export default function FileUpload({
                                 <button
                                     type="button"
                                     onClick={() => cameraRef.current?.click()}
-                                    className="inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-secondary hover:underline sm:hidden"
+                                    className="tap-area inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-secondary hover:underline sm:hidden"
                                 >
                                     <Camera className="h-4 w-4" aria-hidden="true" />
                                     Reprendre
@@ -193,7 +193,7 @@ export default function FileUpload({
                                 <button
                                     type="button"
                                     onClick={value ? remove : onRemoveCurrent}
-                                    className="inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-danger-600 hover:underline"
+                                    className="tap-area inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-danger-600 hover:underline"
                                 >
                                     <Trash2 className="h-4 w-4" aria-hidden="true" />
                                     Retirer

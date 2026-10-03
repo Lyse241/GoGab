@@ -55,7 +55,7 @@ export default function NotificationBell({ className }) {
                                 type="button"
                                 onClick={markAllRead}
                                 disabled={unreadCount === 0}
-                                className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-2 text-sm font-semibold text-secondary hover:bg-secondary-50 disabled:pointer-events-none disabled:text-gray-300"
+                                className="tap-area inline-flex min-h-9 items-center gap-1.5 rounded-full px-2 text-sm font-semibold text-secondary hover:bg-secondary-50 disabled:pointer-events-none disabled:text-gray-300"
                             >
                                 <CheckCheck className="h-4 w-4" aria-hidden="true" />
                                 Tout marquer comme lu

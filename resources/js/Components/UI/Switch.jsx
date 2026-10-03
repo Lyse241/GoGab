@@ -38,7 +38,8 @@ export default function Switch({ checked, onChange, label, description, reverse 
                 onChange={onChange}
                 aria-busy={loading || undefined}
                 className={cn(
-                    'relative inline-flex shrink-0 cursor-pointer items-center rounded-full p-1 transition-colors duration-200',
+                    // tap-area : zone tactile de 44 px même pour la petite taille.
+                    'tap-area relative inline-flex shrink-0 cursor-pointer items-center rounded-full p-1 transition-colors duration-200',
                     'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
                     'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60',
                     checked ? 'bg-primary-600' : 'bg-gray-300',

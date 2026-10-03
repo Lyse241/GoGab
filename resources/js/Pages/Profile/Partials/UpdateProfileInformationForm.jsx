@@ -3,7 +3,7 @@ import Button from '@/Components/UI/Button';
 import Card, { CardHeader } from '@/Components/UI/Card';
 import Input from '@/Components/UI/Input';
 import Textarea from '@/Components/UI/Textarea';
-import { focusFirstError } from '@/utils/focusFirstError';
+import { focusFirstError } from '@/Components/FormErrors';
 import { Link, useForm } from '@inertiajs/react';
 import { Save } from 'lucide-react';
 

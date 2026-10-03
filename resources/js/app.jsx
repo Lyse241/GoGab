@@ -1,15 +1,19 @@
 import '../css/app.css';
 import './bootstrap';
 
+import { focusFirstError } from '@/Components/FormErrors';
 import { ToastProvider } from '@/Components/UI/Toast';
 import { CartProvider } from '@/Contexts/CartContext';
 import { NeighborhoodProvider } from '@/Contexts/NeighborhoodContext';
 import { NotificationsProvider } from '@/Contexts/NotificationsContext';
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, router } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'Gogab';
+
+// Toute erreur de validation (n'importe quel formulaire) : focus sur le premier champ en erreur.
+router.on('error', (event) => focusFirstError(event.detail.errors));
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
