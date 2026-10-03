@@ -289,6 +289,7 @@ Enum `PaymentMethod` : `airtel_money`, `moov_money`, `cash` (ex-`cash_on_deliver
 ### Tests PHPUnit déjà présents
 
 Auth Breeze, profil, catalogue, panier (pages), commandes, livreur, admin, rôles, pages d’erreur.
+Parcours critiques (`tests/Feature/CriticalFlows/`, à relancer avant chaque livraison) : `RegistrationFlowTest` (inscriptions client, livreur et entreprise avec documents → `pending` + admins notifiés), `AccountValidationFlowTest` (valider, refuser avec motif, refus → correction → revalidation ; un compte non validé ne commande pas, ne reçoit pas d’offres, ne gère pas de commerce), `AccessControlTest` (matrice rôle × espace, chaque étape de commande refusée à tout mauvais rôle, documents visibles du seul propriétaire et des admins), `OrderLifecycleTest` (commande de bout en bout par HTTP : statut, notifications de chaque partie à chaque étape, historique), `CourierConcurrencyTest` (deux livreurs, une seule prise ; course rejouée avec la commande lue « encore libre »), `CheckoutSecurityTest` (prix falsifiés ignorés, produit d’un autre commerce, commerce fermé, espèces < total). Outils : trait `CriticalFlowHelpers` (`courierRegistration()`, `notificationsDuring()`…). Contrôle par mutation fait : ouvrir `/business` aux clients ou laisser un client accepter sa commande fait échouer `AccessControlTest`.
 
 ## Absences à combler (cible métier, pas encore dans le code)
 
