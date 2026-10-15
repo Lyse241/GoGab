@@ -8,6 +8,7 @@ import DashboardLayout from '@/Layouts/DashboardLayout';
 import Button from '@/Components/UI/Button';
 import { formatFCFA } from '@/utils/format';
 import { Head, usePoll } from '@inertiajs/react';
+import { Suspense, lazy } from 'react';
 import { ArrowLeft, History, MessageSquareText } from 'lucide-react';
 
 function Row({ label, children }) {
@@ -19,11 +20,14 @@ function Row({ label, children }) {
     );
 }
 
+// Carte chargée à la demande (Leaflet), seulement pendant l'approche du livreur.
+const TrackingMap = lazy(() => import('@/Components/Tracking/TrackingMap'));
+
 /**
  * Détail d'une commande pour l'entreprise : articles, client, livraison, paiement, actions et
  * historique complet (chaque changement de statut, son auteur, sa note). Rafraîchi toutes les 10 s.
  */
-export default function Show({ order, reporting }) {
+export default function Show({ order, reporting, tracking }) {
     usePoll(10000, { only: ['order'] });
 
     return (
@@ -95,6 +99,18 @@ export default function Show({ order, reporting }) {
                         <Card>
                             <CourierCard courier={order.courier} />
                         </Card>
+                    )}
+
+                    {/* Approche du livreur : visible jusqu'au retrait de la commande, pas pendant la livraison. */}
+                    {order.status === 'livreur_assigne' && (
+                        <Suspense fallback={<div className="h-72 animate-pulse rounded-2xl bg-gray-100" aria-hidden="true" />}>
+                            <TrackingMap
+                                orderId={order.id}
+                                initial={tracking}
+                                title="Livreur en approche"
+                                description="Visible jusqu’à ce qu’il ait récupéré la commande."
+                            />
+                        </Suspense>
                     )}
                 </div>
 

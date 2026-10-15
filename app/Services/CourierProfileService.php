@@ -48,6 +48,17 @@ class CourierProfileService
     }
 
     /**
+     * Rayon de couverture (km autour du quartier de départ) : les offres suivent immédiatement.
+     */
+    public function setCoverage(User $courier, int $km): DeliveryProfile
+    {
+        $profile = $this->profile($courier);
+        $profile->update(['coverage_km' => $km]);
+
+        return $profile;
+    }
+
+    /**
      * Courses en cours du livreur (la plus ancienne d'abord).
      *
      * @return Collection<int, Order>

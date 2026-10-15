@@ -16,8 +16,8 @@ import { cartTotals } from '@/utils/cartTotals';
 import { cn } from '@/utils/cn';
 import { formatFCFA, imageUrl } from '@/utils/format';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { useRef, useState } from 'react';
-import { Banknote, Check, CircleAlert, Clock, Hourglass, MapPin, ShoppingBag, Smartphone } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Banknote, Bike, Check, CircleAlert, Clock, Hourglass, MapPin, ShoppingBag, Smartphone, Tag } from 'lucide-react';
 
 const LANDMARKS_MIN = 10;
 
@@ -98,7 +98,7 @@ function newCheckoutToken() {
     return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-export default function Index({ store, address, neighborhoods, paymentMethods, deliveryFee, quickCashAmounts, canOrder }) {
+export default function Index({ store, address, neighborhoods, paymentMethods, deliveryFee, quickCashAmounts, canOrder, deliveryAvailable }) {
     const carts = useCart();
     const cart = carts.cartOf(store.id) ?? { store, items: [] };
     const { neighborhoodId } = useNeighborhood();
@@ -110,7 +110,41 @@ export default function Index({ store, address, neighborhoods, paymentMethods, d
     const unavailableIds = new Set(status?.unavailable_product_ids ?? []);
     const unavailableItems = cart.items.filter((item) => unavailableIds.has(item.product_id));
     const { total: subtotal, count } = cartTotals(cart.items, unavailableIds);
-    const total = subtotal + deliveryFee;
+    // Code promo appliqué : { code, label, discount } (réduction calculée par le serveur, qui la
+    // recalcule à l'envoi). Retiré si le sous-total change.
+    const [promo, setPromo] = useState(null);
+    const [promoInput, setPromoInput] = useState('');
+    const [promoError, setPromoError] = useState(null);
+    const [promoLoading, setPromoLoading] = useState(false);
+    useEffect(() => {
+        setPromo(null);
+    }, [subtotal]);
+    const discount = promo?.discount ?? 0;
+    const total = Math.max(0, subtotal + deliveryFee - discount);
+
+    const applyPromo = async () => {
+        if (!promoInput.trim()) {
+            setPromoError('Saisissez un code promo.');
+            return;
+        }
+        setPromoLoading(true);
+        setPromoError(null);
+        try {
+            const { data: result } = await window.axios.post(route('checkout.promo', store.id), {
+                promo_code: promoInput,
+                items: cart.items
+                    .filter((item) => !unavailableIds.has(item.product_id))
+                    .map((item) => ({ product_id: item.product_id, quantity: item.quantity })),
+            });
+            setPromo({ code: result.code, label: result.label, discount: result.discount });
+            setPromoInput('');
+        } catch (error) {
+            setPromo(null);
+            setPromoError(error.response?.data?.errors?.promo_code?.[0] ?? 'Impossible de vérifier ce code pour le moment.');
+        } finally {
+            setPromoLoading(false);
+        }
+    };
 
     // Adresse du profil, sinon le quartier choisi dans le header.
     const defaultNeighborhood = address.neighborhood_id ?? (neighborhoods.some((n) => n.id === neighborhoodId) ? neighborhoodId : '');
@@ -156,6 +190,7 @@ export default function Index({ store, address, neighborhoods, paymentMethods, d
             store_id: store.id,
             checkout_token: checkoutToken,
             cash_given: values.payment_method === 'cash' ? values.cash_given : null,
+            promo_code: promo?.code ?? null,
             items: cart.items.map((item) => ({ product_id: item.product_id, quantity: item.quantity })),
         }));
 
@@ -212,7 +247,7 @@ export default function Index({ store, address, neighborhoods, paymentMethods, d
 
                                 return (
                                     <li key={item.product_id} className="flex items-center gap-3 py-2.5">
-                                        <LazyImage src={imageUrl(item.image)} alt="" className={cn('h-11 w-11 shrink-0 rounded-lg', unavailable && 'opacity-50 grayscale')} />
+                                        <LazyImage src={imageUrl(item.image, 'sm')} alt="" className={cn('h-11 w-11 shrink-0 rounded-lg', unavailable && 'opacity-50 grayscale')} />
                                         <span className={cn('min-w-0 flex-1 text-sm', unavailable ? 'text-gray-500 line-through' : 'text-gray-800')}>
                                             <span className="font-semibold">{item.quantity} ×</span> {item.name}
                                         </span>
@@ -223,6 +258,45 @@ export default function Index({ store, address, neighborhoods, paymentMethods, d
                                 );
                             })}
                         </ul>
+                        <div className="mt-3 border-t border-gray-100 pt-3">
+                            {promo ? (
+                                <p className="flex items-center justify-between gap-2 text-sm">
+                                    <span className="inline-flex items-center gap-1.5 font-medium text-success-700">
+                                        <Tag className="h-4 w-4" aria-hidden="true" />
+                                        {promo.code} · {promo.label}
+                                    </span>
+                                    <button type="button" onClick={() => setPromo(null)} className="tap-area text-gray-600 underline">
+                                        Retirer
+                                    </button>
+                                </p>
+                            ) : (
+                                <div className="flex items-start gap-2">
+                                    <Input
+                                        id="promo_code"
+                                        className="flex-1"
+                                        placeholder="Code promo"
+                                        aria-label="Code promo"
+                                        autoCapitalize="characters"
+                                        maxLength={30}
+                                        value={promoInput}
+                                        onChange={(e) => {
+                                            setPromoInput(e.target.value.toUpperCase());
+                                            setPromoError(null);
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                applyPromo();
+                                            }
+                                        }}
+                                        error={promoError ?? errors.promo_code}
+                                    />
+                                    <Button type="button" variant="outline" loading={promoLoading} onClick={applyPromo}>
+                                        Appliquer
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
                         <dl className="mt-3 space-y-1.5 border-t border-gray-100 pt-3 text-sm">
                             <div className="flex justify-between">
                                 <dt className="text-gray-600">Sous-total</dt>
@@ -232,6 +306,12 @@ export default function Index({ store, address, neighborhoods, paymentMethods, d
                                 <dt className="text-gray-600">Frais de livraison</dt>
                                 <dd className="font-medium text-gray-900">{formatFCFA(deliveryFee)}</dd>
                             </div>
+                            {promo && (
+                                <div className="flex justify-between text-success-700">
+                                    <dt>Code {promo.code}</dt>
+                                    <dd className="font-medium">−{formatFCFA(discount)}</dd>
+                                </div>
+                            )}
                             <div className="flex justify-between border-t border-gray-100 pt-2 text-base">
                                 <dt className="font-semibold text-gray-900">Total</dt>
                                 <dd className="text-lg font-bold text-gray-900">{formatFCFA(total)}</dd>
@@ -245,6 +325,16 @@ export default function Index({ store, address, neighborhoods, paymentMethods, d
 
                 <div className="space-y-4 lg:order-1">
                     <FormErrors errors={cartError ? {} : errors} />
+
+                    {deliveryAvailable === false && (
+                        <div role="status" className="flex items-start gap-3 rounded-2xl border border-warning-200 bg-warning-50 p-4 text-sm">
+                            <Bike className="mt-0.5 h-5 w-5 shrink-0 text-warning-700" aria-hidden="true" />
+                            <p className="text-gray-800">
+                                <span className="font-semibold text-secondary-900">Aucun livreur disponible près de ce commerce pour le moment.</span>{' '}
+                                Votre commande sera proposée à tous les livreurs de l’agglomération après quelques minutes : l’attente peut être plus longue.
+                            </p>
+                        </div>
+                    )}
 
                     <Card>
                         <CardHeader title="Adresse de livraison" action={<MapPin className="h-5 w-5 text-primary-600" aria-hidden="true" />} />

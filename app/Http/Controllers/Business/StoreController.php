@@ -86,10 +86,11 @@ class StoreController extends Controller
         $store = $this->store($request)->load('openingHours');
 
         return Inertia::render('Business/Store/Edit', [
-            'store' => $store->only(['id', 'name', 'category_id', 'description', 'phone', 'neighborhood_id', 'address_landmarks', 'logo', 'cover_image']),
+            'store' => $store->only(['id', 'name', 'category_id', 'description', 'phone', 'neighborhood_id', 'address_landmarks', 'logo', 'cover_image', 'latitude', 'longitude']),
             'openingHours' => StoreHours::schedule($store),
             'categories' => Category::orderBy('sort_order')->orderBy('name')->get(['id', 'name']),
-            'neighborhoods' => Neighborhood::orderBy('name')->get(['id', 'name', 'zone']),
+            // Centre de chaque quartier : point de départ de la carte où l'entreprise pose son épingle.
+            'neighborhoods' => Neighborhood::orderBy('name')->get(['id', 'name', 'zone', 'latitude', 'longitude']),
             'limits' => ['logo' => UpdateStoreRequest::LOGO_MAX_KB * 1024, 'cover_image' => UpdateStoreRequest::COVER_MAX_KB * 1024],
         ]);
     }

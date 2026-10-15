@@ -1,6 +1,7 @@
 import { StoreThumb } from '@/Components/Cart/CartList';
 import LazyImage from '@/Components/LazyImage';
 import ReportProblemButton from '@/Components/Reports/ReportProblemButton';
+import ReviewCard from '@/Components/Reviews/ReviewCard';
 import Button from '@/Components/UI/Button';
 import Card, { CardHeader } from '@/Components/UI/Card';
 import ConfirmDialog from '@/Components/UI/ConfirmDialog';
@@ -11,10 +12,14 @@ import { cn } from '@/utils/cn';
 import { formatFCFA, imageUrl } from '@/utils/format';
 import { Head, Link, router, usePoll } from '@inertiajs/react';
 import { ArrowLeft, Bike, Check, MapPin, Phone, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 
 // Tant que la commande n'est pas terminée, la page se met à jour toute seule.
 const REFRESH_INTERVAL = 10000;
+
+// Carte de suivi chargée à la demande (Leaflet pèse ~150 Ko) : seulement pendant la livraison.
+const TrackingMap = lazy(() => import('@/Components/Tracking/TrackingMap'));
+const TRACKED = ['livreur_assigne', 'en_livraison', 'arrive'];
 
 function Row({ label, children }) {
     return (
@@ -93,7 +98,7 @@ function Timeline({ steps }) {
  * Suivi d'une commande : timeline en direct, livreur (appel), annulation tant qu'elle est en
  * attente, récapitulatif (articles, totaux, adresse, paiement).
  */
-export default function Show({ order, reporting }) {
+export default function Show({ order, reporting, can_review, review, tracking }) {
     const [cancelOpen, setCancelOpen] = useState(false);
     const [reason, setReason] = useState('');
     const [cancelling, setCancelling] = useState(false);
@@ -145,6 +150,12 @@ export default function Show({ order, reporting }) {
                     </div>
                     <StatusBadge status={order.status} />
                 </div>
+
+                {TRACKED.includes(order.status) && (
+                    <Suspense fallback={<div className="h-72 animate-pulse rounded-2xl bg-gray-100" aria-hidden="true" />}>
+                        <TrackingMap orderId={order.id} initial={tracking} />
+                    </Suspense>
+                )}
 
                 <Card>
                     <CardHeader
@@ -218,7 +229,7 @@ export default function Show({ order, reporting }) {
                     <ul className="divide-y divide-gray-100">
                         {order.items.map((item) => (
                             <li key={item.id} className="flex items-center gap-3 py-2.5">
-                                <LazyImage src={imageUrl(item.image)} alt="" className="h-11 w-11 shrink-0 rounded-lg" />
+                                <LazyImage src={imageUrl(item.image, 'sm')} alt="" className="h-11 w-11 shrink-0 rounded-lg" />
                                 <span className="min-w-0 flex-1 text-sm text-gray-800">
                                     <span className="font-semibold">{item.quantity} ×</span> {item.name}
                                 </span>
@@ -229,12 +240,17 @@ export default function Show({ order, reporting }) {
                     <dl className="mt-2 border-t border-gray-100 pt-2">
                         <Row label="Sous-total">{formatFCFA(order.subtotal)}</Row>
                         <Row label="Frais de livraison">{formatFCFA(order.delivery_fee)}</Row>
+                        {Number(order.discount) > 0 && (
+                            <Row label={`Code ${order.promo_code}`}>−{formatFCFA(order.discount)}</Row>
+                        )}
                         <div className="flex justify-between gap-4 border-t border-gray-100 pt-3">
                             <dt className="font-semibold text-gray-900">Total</dt>
                             <dd className="text-lg font-bold text-gray-900">{formatFCFA(order.total_price)}</dd>
                         </div>
                     </dl>
                 </Card>
+
+                <ReviewCard order={order} canReview={can_review} review={review} />
 
                 {reporting && (
                     <div className="flex justify-center">

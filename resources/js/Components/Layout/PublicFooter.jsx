@@ -1,4 +1,5 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import InstallAppCard from '@/Components/Layout/InstallAppCard';
 import { Link, usePage } from '@inertiajs/react';
 import { Wallet } from 'lucide-react';
 
@@ -82,9 +83,16 @@ export default function PublicFooter() {
                 )}
             </div>
 
+            <div className="mx-auto max-w-6xl px-4 pb-6 sm:px-6 lg:hidden">
+                <InstallAppCard />
+            </div>
+
             <div className="border-t border-white/10">
-                <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-secondary-300 sm:px-6">
-                    © {new Date().getFullYear()} Gogab · Libreville, Gabon
+                <p className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-5 text-xs text-secondary-200 sm:px-6">
+                    <span>© {new Date().getFullYear()} Gogab · Libreville, Gabon</span>
+                    <Link href={route('credits.photos')} className="tap-area underline-offset-2 hover:text-white hover:underline">
+                        Crédits photos
+                    </Link>
                 </p>
             </div>
         </footer>

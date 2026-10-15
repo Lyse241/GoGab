@@ -13,7 +13,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Envoi des notifications push : réel par défaut, remplacé par un faux dans les tests.
+        $this->app->bind(\App\Contracts\PushTransport::class, \App\Services\WebPushTransport::class);
     }
 
     /**

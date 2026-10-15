@@ -6,9 +6,11 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Models\Order;
 use App\Models\User;
+use App\Services\CourierCoverage;
 use App\Services\CourierProfileService;
 use App\Services\OrderWorkflow;
 use App\Services\ReportService;
+use App\Services\TrackingService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,19 +38,15 @@ class DeliveryController extends Controller
         $isAvailable = (bool) $user->deliveryProfile?->is_available;
         $active = $user->deliveries()->whereIn('status', CourierProfileService::ACTIVE_STATUSES)->oldest()->first();
 
-        $offers = $zone && $isAvailable
-            ? Order::with(['store:id,name,neighborhood_id', 'store.neighborhood:id,name,zone', 'neighborhood:id,name', 'items:id,order_id,quantity'])
-                ->where('status', OrderStatus::SearchingCourier)
-                ->whereNull('delivery_id')
-                ->whereHas('store.neighborhood', fn (Builder $query) => $query->where('zone', $zone))
-                ->orderByRaw('coalesce(announced_at, updated_at) asc')
-                ->oldest('id')
-                ->get()
+        $offers = $isAvailable
+            ? app(CourierCoverage::class)->offersFor($user, ['neighborhood:id,name', 'items:id,order_id,quantity'])
             : collect();
 
         return Inertia::render('Delivery/Offers', [
             'offers' => $offers->map(fn (Order $order) => $this->presentOffer($order)),
             'zone' => $zone,
+            'coverageKm' => $user->deliveryProfile?->coverage_km,
+            'baseNeighborhood' => $user->deliveryProfile?->baseNeighborhood?->name,
             'isAvailable' => $isAvailable,
             // Course déjà en cours : impossible d'en accepter une autre.
             'busy' => $active ? ['id' => $active->id, 'number' => $active->reference, 'message' => OrderWorkflow::BUSY_MESSAGE] : null,
@@ -99,6 +97,8 @@ class DeliveryController extends Controller
 
         return Inertia::render('Delivery/Current', [
             'order' => $order ? $this->presentCurrent($order, $user) : null,
+            // Points de la carte (commerce, adresse du client) : servent au mode démonstration du partage de position.
+            'tracking' => $order ? app(TrackingService::class)->forOrder($order, $user) : null,
             // « Signaler un problème » : le client ou le commerce de la course.
             'reporting' => $order ? $reports->formFor($order, $user) : null,
         ]);
@@ -166,6 +166,8 @@ class DeliveryController extends Controller
             'number' => $order->reference,
             'status' => $order->status->value,
             'next_status' => $next?->value,
+            // Heure à laquelle le livreur a signalé son arrivée au commerce (null tant qu'il ne l'a pas fait).
+            'arrived_at_store' => $order->courier_arrived_at?->setTimezone(config('gogab.timezone'))->format('H\hi'),
             'store' => [
                 'name' => $order->store->name,
                 'neighborhood' => $order->store->neighborhood?->name,

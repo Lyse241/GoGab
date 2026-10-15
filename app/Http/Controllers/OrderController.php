@@ -8,6 +8,8 @@ use App\Http\Requests\StoreOrderRequest;
 use App\Models\Order;
 use App\Services\OrderWorkflow;
 use App\Services\ReportService;
+use App\Services\ReviewService;
+use App\Services\TrackingService;
 use App\Support\OrderTimeline;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
@@ -63,6 +65,8 @@ class OrderController extends Controller
             'address_landmarks' => trim($request->validated('address_landmarks')),
             'subtotal' => $quote['subtotal'],
             'delivery_fee' => $quote['delivery_fee'],
+            'discount' => $quote['discount'],
+            'promo_code' => $quote['promo_code'],
             'total_price' => $quote['total'],
             'payment_method' => $paymentMethod,
             'cash_given' => $paymentMethod === PaymentMethod::Cash ? $request->validated('cash_given') : null,
@@ -160,12 +164,12 @@ class OrderController extends Controller
      * Suivi d'une commande : récapitulatif, timeline (order_status_histories), livreur assigné,
      * annulation tant qu'elle est en attente. Rafraîchi toutes les 10 s par la page.
      */
-    public function show(Request $request, Order $order, OrderWorkflow $workflow, ReportService $reports): Response
+    public function show(Request $request, Order $order, OrderWorkflow $workflow, ReportService $reports, ReviewService $reviews): Response
     {
         // OrderPolicy::view : 403 si la commande n'est pas la sienne.
         Gate::authorize('view', $order);
 
-        $order->load(['store:id,name,logo,phone,owner_id', 'neighborhood:id,name', 'items.product:id,name,image', 'statusHistories', 'delivery.deliveryProfile']);
+        $order->load(['review', 'store:id,name,logo,phone,owner_id', 'neighborhood:id,name', 'items.product:id,name,image', 'statusHistories', 'delivery.deliveryProfile']);
         $courier = $order->delivery;
 
         return Inertia::render('Orders/Show', [
@@ -176,6 +180,8 @@ class OrderController extends Controller
                 'is_final' => $order->status->isFinal(),
                 'subtotal' => $order->subtotal,
                 'delivery_fee' => $order->delivery_fee,
+                'discount' => $order->discount,
+                'promo_code' => $order->promo_code,
                 'total_price' => $order->total_price,
                 'address_landmarks' => $order->address_landmarks,
                 'payment_method' => $order->payment_method->value,
@@ -206,6 +212,11 @@ class OrderController extends Controller
             ],
             // « Signaler un problème » : l'entreprise ou le livreur de cette commande.
             'reporting' => $reports->formFor($order, $request->user()),
+            // Suivi en direct (carte) : position du livreur pendant la course, rafraîchie par la carte.
+            'tracking' => app(TrackingService::class)->forOrder($order, $request->user()),
+            // Avis : formulaire tant que la commande livrée n'a pas été notée, puis la note donnée.
+            'can_review' => $reviews->canReview($order, $request->user()),
+            'review' => $order->review?->only(['store_rating', 'courier_rating', 'comment']),
         ]);
     }
 }

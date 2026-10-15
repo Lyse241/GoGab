@@ -33,7 +33,7 @@ class StoreProfileTest extends TestCase
         $this->store = Store::factory()->create([
             'owner_id' => $this->owner->id,
             'name' => 'Chez Maman Ngoye',
-            'neighborhood_id' => Neighborhood::create(['name' => 'Louis', 'zone' => 'Centre'])->id,
+            'neighborhood_id' => Neighborhood::create(['name' => 'Louis', 'zone' => 'Libreville'])->id,
         ]);
     }
 
@@ -55,7 +55,7 @@ class StoreProfileTest extends TestCase
             'category_id' => Category::firstOrCreate(['slug' => 'restaurant'], ['name' => 'Restaurant'])->id,
             'description' => 'Cuisine gabonaise maison.',
             'phone' => '+241 74 12 34 56',
-            'neighborhood_id' => Neighborhood::firstOrCreate(['name' => 'Akanda'], ['zone' => 'Nord'])->id,
+            'neighborhood_id' => Neighborhood::firstOrCreate(['name' => 'Akanda'], ['zone' => 'Akanda'])->id,
             'address_landmarks' => 'Face à la pharmacie, bâtiment bleu',
             'opening_hours' => StoreHours::everyDay('09:00', '21:00'),
             ...$overrides,
@@ -202,6 +202,46 @@ class StoreProfileTest extends TestCase
                 'opening_hours' => [...array_slice(StoreHours::everyDay('09:00', '21:00'), 0, 6), ['day_of_week' => 7, 'is_closed' => false, 'opens_at' => '', 'closes_at' => '']],
             ]))
             ->assertSessionHasErrors(['opening_hours.6.opens_at', 'opening_hours.6.closes_at']);
+    }
+
+    public function test_the_owner_pins_the_exact_position_of_the_store_and_can_remove_it(): void
+    {
+        $this->actingAs($this->owner)
+            ->post('/business/store', $this->validPayload(['latitude' => '0.4123456', 'longitude' => '9.4567890']))
+            ->assertSessionHasNoErrors();
+
+        $store = $this->store->fresh();
+        $this->assertEqualsWithDelta(0.4123456, (float) $store->latitude, 0.0000001);
+        $this->assertEqualsWithDelta(9.456789, (float) $store->longitude, 0.0000001);
+
+        // La page « Mon commerce » renvoie l'épingle et le centre de chaque quartier (départ de la carte).
+        $this->actingAs($this->owner)->get('/business/store')->assertInertia(fn (Assert $page) => $page
+            ->where('store.latitude', fn ($lat) => abs((float) $lat - 0.4123456) < 0.0000001)
+            ->has('neighborhoods.0.latitude'));
+
+        // Retirer l'épingle : les deux coordonnées vides.
+        $this->actingAs($this->owner)
+            ->post('/business/store', $this->validPayload(['latitude' => '', 'longitude' => '']))
+            ->assertSessionHasNoErrors();
+        $this->assertNull($this->store->fresh()->latitude);
+        $this->assertNull($this->store->fresh()->longitude);
+    }
+
+    public function test_the_store_pin_must_be_complete_and_inside_gabon(): void
+    {
+        $this->actingAs($this->owner)
+            ->post('/business/store', $this->validPayload(['latitude' => '0.41']))
+            ->assertSessionHasErrors('longitude');
+
+        $this->actingAs($this->owner)
+            ->post('/business/store', $this->validPayload(['latitude' => '48.8566', 'longitude' => '2.3522']))
+            ->assertSessionHasErrors(['latitude' => 'Cette position est en dehors du Gabon.']);
+
+        $this->actingAs($this->owner)
+            ->post('/business/store', $this->validPayload(['latitude' => 'abc', 'longitude' => '9.4']))
+            ->assertSessionHasErrors('latitude');
+
+        $this->assertNull($this->store->fresh()->latitude);
     }
 
     public function test_business_without_store_gets_not_found(): void

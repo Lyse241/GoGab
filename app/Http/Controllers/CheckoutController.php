@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Enums\PaymentMethod;
+use App\Exceptions\PromoException;
 use App\Models\Neighborhood;
+use App\Models\PromoCode;
 use App\Models\Store;
+use App\Services\CourierCoverage;
 use App\Services\OrderPricing;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -46,6 +50,36 @@ class CheckoutController extends Controller
             'deliveryFee' => OrderPricing::deliveryFee(),
             'quickCashAmounts' => self::QUICK_CASH_AMOUNTS,
             'canOrder' => $user->isApproved(),
+            'deliveryAvailable' => app(CourierCoverage::class)->hasCourierFor($store),
+        ]);
+    }
+
+    /**
+     * « Appliquer » un code promo sur le panier de ce commerce : renvoie la réduction et le nouveau
+     * total (prix relus en base). Code refusé : 422 avec le motif.
+     */
+    public function promo(Request $request, Store $store, OrderPricing $pricing): JsonResponse
+    {
+        abort_unless($store->isVisible(), 404);
+
+        $data = $request->validate([
+            'promo_code' => ['required', 'string', 'max:30'],
+            'items' => ['required', 'array', 'min:1', 'max:50'],
+            'items.*.product_id' => ['required', 'integer', 'distinct'],
+            'items.*.quantity' => ['required', 'integer', 'min:1', 'max:99'],
+        ], ['promo_code.required' => 'Saisissez un code promo.']);
+
+        try {
+            $quote = $pricing->quote($store, $data['items'], $data['promo_code'], $request->user());
+        } catch (PromoException $e) {
+            return response()->json(['message' => $e->getMessage(), 'errors' => ['promo_code' => [$e->getMessage()]]], 422);
+        }
+
+        return response()->json([
+            'code' => $quote['promo_code'],
+            'discount' => $quote['discount'],
+            'total' => $quote['total'],
+            'label' => PromoCode::where('code', $quote['promo_code'])->first()?->label(),
         ]);
     }
 

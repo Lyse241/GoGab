@@ -13,9 +13,10 @@ class Neighborhood extends Model
     public $timestamps = false;
 
     /**
-     * Zones de Libreville. Deux quartiers de la même zone sont « proches » (pas de GPS).
+     * Zones d'activité = les trois communes du Grand Libreville. Un livreur choisit une commune et
+     * voit les courses de TOUS les quartiers de cette commune (pas de GPS : la proximité, c'est la commune).
      */
-    public const ZONES = ['Nord', 'Centre', 'Est', 'Sud'];
+    public const ZONES = ['Libreville', 'Akanda', 'Owendo'];
 
     /**
      * The attributes that are mass assignable.
@@ -25,6 +26,8 @@ class Neighborhood extends Model
     protected $fillable = [
         'name',
         'zone',
+        'latitude',
+        'longitude',
     ];
 
     public function orders(): HasMany

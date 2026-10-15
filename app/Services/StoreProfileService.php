@@ -25,7 +25,7 @@ class StoreProfileService
             'cover_image' => [$cover, (bool) ($data['remove_cover_image'] ?? false), 'stores'],
         ];
 
-        $attributes = collect($data)->only(['name', 'category_id', 'description', 'phone', 'neighborhood_id', 'address_landmarks'])->all();
+        $attributes = collect($data)->only(['name', 'category_id', 'description', 'phone', 'neighborhood_id', 'address_landmarks', 'latitude', 'longitude'])->all();
         $newFiles = [];
         $oldFiles = [];
 

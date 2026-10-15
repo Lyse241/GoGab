@@ -104,6 +104,11 @@ class OrderWorkflow
             $order->items()->createMany(collect($items)->all());
             $order->recordStatus(OrderStatus::Pending, $client);
 
+            // Code promo : utilisation enregistrée (et limite revérifiée) dans la même transaction.
+            if (filled($order->promo_code)) {
+                app(PromoService::class)->redeem($order, $client);
+            }
+
             return $order;
         });
 
@@ -183,6 +188,16 @@ class OrderWorkflow
             $fresh->refresh();
             $fresh->recordStatus($to, $actor, $note);
 
+            // Fin de course (remise ou annulation) : la position du livreur n'est plus conservée.
+            if (in_array($to, [OrderStatus::Delivered, OrderStatus::Cancelled], true) && $fresh->delivery_id) {
+                app(TrackingService::class)->clear($fresh->delivery_id);
+            }
+
+            // Livrée : commission, gains et espèces encaissées entrent au grand livre (même transaction).
+            if ($to === OrderStatus::Delivered) {
+                app(WalletService::class)->settleDelivery($fresh);
+            }
+
             return $fresh;
         });
 
@@ -211,6 +226,7 @@ class OrderWorkflow
                 ->whereNull('delivery_id')
                 ->update([
                     'announced_at' => now(),
+                    'widened_at' => null,
                     'announcement_count' => $fresh->announcement_count + 1,
                     'updated_at' => now(),
                 ]);
@@ -224,7 +240,7 @@ class OrderWorkflow
 
         $order->load(['store.neighborhood', 'neighborhood']);
         Notifier::send(
-            $this->couriersForZone($order->store->neighborhood?->zone),
+            $this->couriersForOrder($order),
             'Course toujours disponible',
             $this->announcementMessage($order),
             route('delivery.offers'),
@@ -272,26 +288,14 @@ class OrderWorkflow
     }
 
     /**
-     * Livreurs qui reçoivent l'annonce : validés, disponibles, non bloqués, rattachés à un
-     * quartier de la même zone que le commerce (pas de GPS).
+     * Livreurs qui reçoivent l'annonce : validés, disponibles, non bloqués, dont le rayon de
+     * couverture contient le commerce (ou tous ceux du Grand Libreville si l'annonce est élargie).
      *
      * @return Collection<int, User>
      */
-    public function couriersForZone(?string $zone): Collection
+    public function couriersForOrder(Order $order): Collection
     {
-        if (! $zone) {
-            return collect();
-        }
-
-        return User::query()
-            ->where('role', Role::Delivery)
-            ->where('account_status', 'approved')
-            ->whereNull('deleted_at')
-            ->where(fn (Builder $query) => $query->whereNull('blocked_until')->orWhere('blocked_until', '<=', now()))
-            ->whereHas('deliveryProfile', fn (Builder $query) => $query
-                ->where('is_available', true)
-                ->whereHas('baseNeighborhood', fn (Builder $query) => $query->where('zone', $zone)))
-            ->get();
+        return app(CourierCoverage::class)->couriersForOrder($order);
     }
 
     /**
@@ -305,17 +309,12 @@ class OrderWorkflow
     }
 
     /**
-     * Le livreur peut-il prendre les courses de ce commerce (même zone) ?
+     * Le livreur peut-il prendre cette course : disponible, et le commerce est dans son rayon de
+     * couverture (ou l'annonce est élargie) ?
      */
     public function courierServesStore(User $courier, Order $order): bool
     {
-        $courier->loadMissing('deliveryProfile.baseNeighborhood');
-        $order->loadMissing('store.neighborhood');
-        $zone = $order->store->neighborhood?->zone;
-
-        return $zone !== null
-            && $courier->deliveryProfile?->is_available
-            && $courier->deliveryProfile->baseNeighborhood?->zone === $zone;
+        return app(CourierCoverage::class)->coversOrder($courier, $order);
     }
 
     /**
@@ -410,7 +409,7 @@ class OrderWorkflow
                 Role::Delivery => $to === OrderStatus::CourierAssigned
                     ? ($order->delivery_id !== null
                         ? self::TAKEN_MESSAGE
-                        : "La commande {$order->reference} n’est pas dans votre zone.")
+                        : "La commande {$order->reference} n’est pas dans votre zone de couverture.")
                     : "La commande {$order->reference} n’est pas assignée à votre compte.",
                 default => 'Vous n’êtes pas concerné par cette commande.',
             }, $order, $to);
@@ -456,7 +455,7 @@ class OrderWorkflow
             ],
             OrderStatus::SearchingCourier => [
                 [
-                    $this->couriersForZone($order->store->neighborhood?->zone),
+                    $this->couriersForOrder($order),
                     'Nouvelle course disponible',
                     $this->announcementMessage($order),
                     $offersUrl,

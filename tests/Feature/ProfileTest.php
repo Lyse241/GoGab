@@ -251,7 +251,7 @@ class ProfileTest extends TestCase
         // Plus de connexion possible, plus d'annonces.
         $this->post('/login', ['email' => $this->courier->email, 'password' => 'password']);
         $this->assertGuest();
-        $this->assertFalse(app(OrderWorkflow::class)->couriersForZone('Centre')->contains('id', $courier->id));
+        $this->assertFalse(app(OrderWorkflow::class)->couriersForOrder($this->makeOrder(\App\Enums\OrderStatus::SearchingCourier))->contains('id', $courier->id));
     }
 
     public function test_deleting_an_account_keeps_the_order_history_of_the_other_parties(): void

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\PaymentMethod;
+use App\Exceptions\PromoException;
 use App\Models\Store;
 use App\Services\OrderPricing;
 use Illuminate\Foundation\Http\FormRequest;
@@ -57,6 +58,8 @@ class StoreOrderRequest extends FormRequest
             // livraison, ignoré pour le Mobile Money.
             'cash_given' => ['exclude_unless:payment_method,'.PaymentMethod::Cash->value, 'required', 'integer', 'min:1', 'max:10000000'],
             'client_note' => ['nullable', 'string', 'max:500'],
+            // Code promo facultatif : vérifié et chiffré par PromoService (OrderPricing::quote).
+            'promo_code' => ['nullable', 'string', 'max:30'],
             // Jeton de la page de commande : un second envoi renvoie la même commande.
             'checkout_token' => ['nullable', 'string', 'min:16', 'max:64'],
             'items' => ['required', 'array', 'min:1', 'max:50'],
@@ -96,7 +99,13 @@ class StoreOrderRequest extends FormRequest
                     return;
                 }
 
-                $quote = app(OrderPricing::class)->quote($store, $this->input('items'));
+                try {
+                    $quote = app(OrderPricing::class)->quote($store, $this->input('items'), $this->input('promo_code'), $this->user());
+                } catch (PromoException $e) {
+                    $validator->errors()->add('promo_code', $e->getMessage());
+
+                    return;
+                }
 
                 if ($this->input('payment_method') === PaymentMethod::Cash->value && (float) $this->input('cash_given') < $quote['total']) {
                     $validator->errors()->add('cash_given', 'Le montant remis doit couvrir le total de la commande ('.number_format($quote['total'], 0, ',', ' ').' FCFA).');

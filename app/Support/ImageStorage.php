@@ -17,11 +17,12 @@ class ImageStorage
     }
 
     /**
-     * Supprime une image locale. Les URLs externes (placeholders Picsum) sont ignorées.
+     * Supprime une image locale. Les URLs externes (placeholders Picsum) et les photos de
+     * démonstration livrées avec l'application (/images/…) sont ignorées.
      */
     public static function delete(?string $path): void
     {
-        if ($path && ! preg_match('#^https?://#', $path)) {
+        if ($path && ! preg_match('#^(https?://|/)#', $path)) {
             Storage::disk('public')->delete($path);
         }
     }

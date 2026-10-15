@@ -20,7 +20,7 @@ class RegistrationTest extends TestCase
     {
         parent::setUp();
 
-        $this->neighborhood = Neighborhood::create(['name' => 'Glass', 'zone' => 'Centre']);
+        $this->neighborhood = Neighborhood::create(['name' => 'Glass', 'zone' => 'Libreville']);
     }
 
     /**

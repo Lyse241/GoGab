@@ -1,10 +1,10 @@
 import Select from '@/Components/UI/Select';
 import { useMemo } from 'react';
 
-const ZONE_ORDER = ['Nord', 'Centre', 'Est', 'Sud'];
+const ZONE_ORDER = ['Libreville', 'Akanda', 'Owendo'];
 
 /**
- * Liste déroulante des quartiers, regroupés par zone de Libreville (Nord, Centre, Est, Sud).
+ * Liste déroulante des quartiers, regroupés par commune (Libreville, Akanda, Owendo).
  * Accepte les mêmes props que UI/Select (id, label, hint, error, value, onChange…).
  */
 export default function NeighborhoodSelect({ neighborhoods, placeholder = 'Choisissez un quartier', ...props }) {
@@ -20,7 +20,7 @@ export default function NeighborhoodSelect({ neighborhoods, placeholder = 'Chois
     return (
         <Select placeholder={placeholder} {...props}>
             {zones.map(([zone, items]) => (
-                <optgroup key={zone} label={`Zone ${zone}`}>
+                <optgroup key={zone} label={`Commune ${zone}`}>
                     {items.map((neighborhood) => (
                         <option key={neighborhood.id} value={neighborhood.id}>
                             {neighborhood.name}

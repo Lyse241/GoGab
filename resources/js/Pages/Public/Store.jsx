@@ -1,5 +1,7 @@
 import { DAYS } from '@/Components/OpeningHoursEditor';
 import OpeningStatusBadge from '@/Components/OpeningStatusBadge';
+import StoreCover from '@/Components/StoreCover';
+import StarRating from '@/Components/Reviews/StarRating';
 import ProductCard from '@/Components/ProductCard';
 import Badge from '@/Components/UI/Badge';
 import EmptyState from '@/Components/UI/EmptyState';
@@ -9,7 +11,7 @@ import { cartTotals } from '@/utils/cartTotals';
 import { cn } from '@/utils/cn';
 import { formatFCFA, imageUrl } from '@/utils/format';
 import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft, ChevronRight, Clock, MapPin, Package, Search, SearchX, ShoppingBag, Store as StoreIcon, X } from 'lucide-react';
+import { ArrowLeft, Bike, ChevronRight, Clock, MapPin, Package, Search, SearchX, ShoppingBag, Store as StoreIcon, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 const OTHERS = 'Autres produits';
@@ -41,11 +43,7 @@ function StoreHeader({ store }) {
     return (
         <section className="mt-4">
             <div className="relative">
-                <div className="h-40 overflow-hidden rounded-3xl bg-gradient-to-br from-primary-600 to-secondary sm:h-64">
-                    {store.cover_image && (
-                        <img src={imageUrl(store.cover_image)} alt="" className="h-full w-full object-cover" />
-                    )}
-                </div>
+                <StoreCover store={store} size="lg" className="h-40 rounded-3xl sm:h-64" />
                 <span className="absolute -bottom-8 left-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-md ring-4 ring-white sm:left-6 sm:h-24 sm:w-24">
                     {store.logo ? (
                         <img src={imageUrl(store.logo)} alt={`Logo de ${store.name}`} className="h-full w-full object-cover" />
@@ -70,6 +68,15 @@ function StoreHeader({ store }) {
                         )}
                     </div>
                     <h1 className="mt-2 text-2xl font-bold text-secondary-900 sm:text-3xl">{store.name}</h1>
+                    {store.rating !== null && (
+                        <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-700">
+                            <StarRating value={store.rating} size="sm" />
+                            <span className="font-semibold">{store.rating.toLocaleString('fr-FR')}</span>
+                            <span className="text-gray-500">
+                                ({store.reviews_count} avis)
+                            </span>
+                        </p>
+                    )}
                     <OpeningStatusBadge isOpen={store.is_open_now} detail={store.status_detail} className="mt-2 max-w-full" />
                     {store.description && <p className="mt-3 max-w-2xl text-gray-700">{store.description}</p>}
                     {store.address_landmarks && (
@@ -114,7 +121,7 @@ function StoreHeader({ store }) {
  * le menu (côté client), produits avec ajout au panier. Commerce fermé : bandeau (message du
  * serveur) et ajout désactivé ; produits indisponibles grisés.
  */
-export default function Store({ store, products }) {
+export default function Store({ store, products, deliveryAvailable }) {
     const cart = useCart();
     const [query, setQuery] = useState('');
     const [active, setActive] = useState(null);
@@ -198,6 +205,19 @@ export default function Store({ store, products }) {
                         <p className="font-semibold text-secondary-900">{store.status_label}</p>
                         <p className="mt-0.5 text-sm text-gray-700">
                             Vous pouvez consulter le menu, mais les commandes ne sont pas possibles pour le moment.
+                        </p>
+                    </div>
+                </div>
+            )}
+
+
+            {deliveryAvailable === false && (
+                <div role="status" className="mt-5 flex items-start gap-3 rounded-2xl border border-warning-200 bg-warning-50 p-4">
+                    <Bike className="mt-0.5 h-5 w-5 shrink-0 text-warning-700" aria-hidden="true" />
+                    <div>
+                        <p className="font-semibold text-secondary-900">Livraison momentanément indisponible près de ce commerce</p>
+                        <p className="mt-0.5 text-sm text-gray-700">
+                            Aucun livreur n’est disponible dans ce secteur pour l’instant. Vous pouvez commander : la recherche s’élargit automatiquement à toute l’agglomération après quelques minutes, mais l’attente peut être plus longue.
                         </p>
                     </div>
                 </div>

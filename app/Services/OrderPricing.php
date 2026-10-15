@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Product;
 use App\Models\Store;
+use App\Models\User;
 use Illuminate\Support\Collection;
 
 /**
@@ -34,9 +35,12 @@ class OrderPricing
 
     /**
      * @param  iterable<array{product_id: int, quantity: int}>  $lines
-     * @return array{items: list<array{product_id: int, quantity: int, price: string}>, subtotal: float, delivery_fee: int, total: float}
+     * @param  string|null  $promoCode  code promo saisi (vérifié pour $client, voir PromoService)
+     * @return array{items: list<array{product_id: int, quantity: int, price: string}>, subtotal: float, delivery_fee: int, discount: int, promo_code: string|null, total: float}
+     *
+     * @throws \App\Exceptions\PromoException code promo refusé
      */
-    public function quote(Store $store, iterable $lines): array
+    public function quote(Store $store, iterable $lines, ?string $promoCode = null, ?User $client = null): array
     {
         $lines = collect($lines);
         $products = $this->availableProducts($store, $lines->pluck('product_id'));
@@ -53,11 +57,21 @@ class OrderPricing
         $subtotal = round($items->sum(fn (array $item) => $item['price'] * $item['quantity']), 2);
         $fee = self::deliveryFee();
 
+        $discount = 0;
+        $code = null;
+        if (filled($promoCode) && $client) {
+            $result = app(PromoService::class)->evaluate($promoCode, $client, $subtotal, $fee);
+            $discount = $result['discount'];
+            $code = $result['promo']->code;
+        }
+
         return [
             'items' => $items->all(),
             'subtotal' => $subtotal,
             'delivery_fee' => $fee,
-            'total' => $subtotal + $fee,
+            'discount' => $discount,
+            'promo_code' => $code,
+            'total' => $subtotal + $fee - $discount,
         ];
     }
 }

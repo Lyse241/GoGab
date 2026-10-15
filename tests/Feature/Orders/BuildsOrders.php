@@ -10,7 +10,7 @@ use App\Models\Store;
 use App\Models\User;
 
 /**
- * Décor des tests de commande : un commerce (zone Centre) avec son entreprise, un client,
+ * Décor des tests de commande : un commerce (zone Libreville) avec son entreprise, un client,
  * un livreur de la zone, un livreur d'une autre zone, un admin.
  */
 trait BuildsOrders
@@ -29,9 +29,9 @@ trait BuildsOrders
 
     protected function setUpOrderWorld(): void
     {
-        $louis = Neighborhood::create(['name' => 'Louis', 'zone' => 'Centre']);
-        $glass = Neighborhood::create(['name' => 'Glass', 'zone' => 'Centre']);
-        $akanda = Neighborhood::create(['name' => 'Akanda', 'zone' => 'Nord']);
+        $louis = Neighborhood::create(['name' => 'Louis', 'zone' => 'Libreville']);
+        $glass = Neighborhood::create(['name' => 'Glass', 'zone' => 'Libreville']);
+        $akanda = Neighborhood::create(['name' => 'Akanda', 'zone' => 'Akanda']);
 
         $this->owner = User::factory()->create(['role' => 'business', 'name' => 'Maman Ngoye']);
         $this->store = Store::factory()->create(['owner_id' => $this->owner->id, 'name' => 'Chez Maman Ngoye', 'neighborhood_id' => $louis->id]);

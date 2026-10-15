@@ -1,3 +1,4 @@
+import PushToggle from '@/Components/Layout/PushToggle';
 import NotificationItem from '@/Components/NotificationItem';
 import { SkeletonList } from '@/Components/UI/Skeleton';
 import useListLoading from '@/Hooks/useListLoading';
@@ -80,6 +81,8 @@ export default function Index({ notifications, filter, counts }) {
             <Head title="Notifications" />
 
             <div className="mx-auto max-w-3xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
+                <PushToggle className="empty:hidden rounded-2xl bg-white p-4 ring-1 ring-gray-100 shadow-card" />
+
                 <Tabs
                     label="Filtrer les notifications"
                     value={filter}

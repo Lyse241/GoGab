@@ -327,7 +327,7 @@ class StoreOpeningHoursTest extends TestCase
 
         return $this->actingAs($client)->post('/orders', [
             'store_id' => $store->id,
-            'neighborhood_id' => Neighborhood::create(['name' => 'Glass', 'zone' => 'Centre'])->id,
+            'neighborhood_id' => Neighborhood::create(['name' => 'Glass', 'zone' => 'Libreville'])->id,
             'address_landmarks' => 'Près de la pharmacie, portail bleu',
             'payment_method' => 'airtel_money',
             'items' => [['product_id' => $product->id, 'quantity' => 1]],

@@ -39,8 +39,8 @@ class RegistrationFlowTest extends TestCase
         Storage::fake('public');
         $this->admin = User::factory()->create(['role' => 'admin']);
         $this->pendingAdmin = User::factory()->pending()->create(['role' => 'admin']);
-        $this->glass = Neighborhood::create(['name' => 'Glass', 'zone' => 'Centre']);
-        $this->louis = Neighborhood::create(['name' => 'Louis', 'zone' => 'Centre']);
+        $this->glass = Neighborhood::create(['name' => 'Glass', 'zone' => 'Libreville']);
+        $this->louis = Neighborhood::create(['name' => 'Louis', 'zone' => 'Libreville']);
     }
 
     public function test_a_client_registers_as_pending_and_the_admins_are_notified(): void

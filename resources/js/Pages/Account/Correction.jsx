@@ -152,7 +152,7 @@ export default function Correction({ rejectionReason, role, values, vehicle, nei
                                     <Input id="license_number" label="Numéro de permis" icon={IdCard} value={data.license_number} onChange={(e) => update('license_number', e.target.value)} error={errors.license_number} required />
                                 </div>
                             )}
-                            <NeighborhoodSelect id="base_neighborhood_id" label="Quartier de base (zone d’activité)" neighborhoods={neighborhoods} value={data.base_neighborhood_id} onChange={(e) => update('base_neighborhood_id', e.target.value)} error={errors.base_neighborhood_id} required />
+                            <NeighborhoodSelect id="base_neighborhood_id" label="Quartier de départ" neighborhoods={neighborhoods} value={data.base_neighborhood_id} onChange={(e) => update('base_neighborhood_id', e.target.value)} error={errors.base_neighborhood_id} required />
                         </div>
                     </Card>
                 )}

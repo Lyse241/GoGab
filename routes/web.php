@@ -11,10 +11,15 @@ use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PhotoCreditsController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StoreController;
+use App\Http\Controllers\TrackingController;
+use App\Http\Controllers\WalletController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -22,6 +27,8 @@ use Inertia\Inertia;
 // Catalogue public
 Route::get('/', [StoreController::class, 'index'])->name('home');
 Route::get('/stores/{store}', [StoreController::class, 'show'])->name('stores.show');
+// Crédits des photos de démonstration (auteurs et licences Creative Commons).
+Route::get('/credits-photos', PhotoCreditsController::class)->name('credits.photos');
 Route::get('/search', SearchController::class)->name('search');
 Route::get('/stores/{store}/status', [StoreController::class, 'status'])->name('stores.status');
 
@@ -44,12 +51,18 @@ Route::get('/cart/{store}/login', [CheckoutController::class, 'login'])->middlew
 Route::get('/checkout/{store}', [CheckoutController::class, 'create'])
     ->middleware(['auth', 'role:client'])
     ->name('checkout');
+// « Appliquer » un code promo (prix et réduction recalculés par le serveur).
+// Limité : empêche d'essayer des codes au hasard jusqu'à en trouver un valide.
+Route::post('/checkout/{store}/promo', [CheckoutController::class, 'promo'])
+    ->middleware(['auth', 'role:client', 'throttle:20,1'])
+    ->name('checkout.promo');
 
 // Commande réservée aux clients dont le compte est validé
 // (un client en attente peut parcourir le catalogue, pas commander).
 Route::middleware(['auth', 'role:client', 'approved'])->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'legacy']);
-    Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
+    // Limité : une commande toutes les quelques secondes suffit à un client, pas à un robot.
+    Route::post('/orders', [OrderController::class, 'store'])->middleware('throttle:20,1')->name('orders.store');
 });
 
 // Mes commandes et suivi : réservés au client (OrderPolicy::view → 403 sur la commande d'un autre).
@@ -98,6 +111,15 @@ Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus'])
     ->middleware(['auth', 'approved'])
     ->name('orders.status.update');
 
+// Suivi en direct : position du livreur et arrivée estimée (OrderPolicy::view).
+Route::get('/orders/{order}/tracking', [TrackingController::class, 'show'])
+    ->middleware(['auth', 'approved'])->name('orders.tracking');
+
+// Avis du client sur une commande livrée (OrderPolicy::review : une seule fois).
+Route::post('/orders/{order}/review', [ReviewController::class, 'store'])
+    ->middleware(['auth', 'role:client', 'approved', 'can:review,order'])
+    ->name('orders.review');
+
 // « Signaler un problème » : uniquement l'autre partie d'une commande (OrderPolicy::report).
 Route::post('/orders/{order}/reports', [ReportController::class, 'store'])
     ->middleware(['auth', 'approved', 'can:report,order'])
@@ -108,8 +130,15 @@ Route::middleware(['auth', 'role:delivery', 'approved'])->prefix('delivery')->na
     Route::get('/', Delivery\HomeController::class)->name('dashboard');
     Route::get('/offers', [DeliveryController::class, 'offers'])->name('offers');
     Route::post('/orders/{order}/accept', [DeliveryController::class, 'accept'])->name('orders.accept');
+    // Position du livreur pendant sa course (toutes les ~8 s : limite large, 30 par minute).
+    Route::post('/orders/{order}/location', [Delivery\LocationController::class, 'store'])
+        ->middleware('throttle:30,1')->name('orders.location');
+    // « Je suis arrivé au commerce » (phase de retrait) : prévient l'entreprise et le client.
+    Route::post('/orders/{order}/arrived-at-store', [Delivery\LocationController::class, 'arrivedAtStore'])
+        ->middleware('throttle:10,1')->name('orders.arrived-at-store');
     Route::get('/current', [DeliveryController::class, 'current'])->name('current');
     Route::get('/history', [DeliveryController::class, 'history'])->name('history');
+    Route::get('/wallet', WalletController::class)->name('wallet');
     Route::get('/profile', [Delivery\ProfileController::class, 'show'])->name('profile');
     Route::patch('/availability', [Delivery\ProfileController::class, 'availability'])->name('availability');
     Route::patch('/profile/base-neighborhood', [Delivery\ProfileController::class, 'updateBaseNeighborhood'])->name('profile.base-neighborhood');
@@ -118,6 +147,8 @@ Route::middleware(['auth', 'role:delivery', 'approved'])->prefix('delivery')->na
 // Espace entreprise : un compte entreprise validé gère son propre commerce (StorePolicy::manage).
 Route::middleware(['auth', 'role:business', 'approved'])->prefix('business')->name('business.')->group(function () {
     Route::get('/', [Business\StoreController::class, 'dashboard'])->name('dashboard');
+    Route::get('/wallet', WalletController::class)->name('wallet');
+    Route::get('/reviews', [Business\ReviewController::class, 'index'])->name('reviews.index');
     Route::patch('/store/open', [Business\StoreController::class, 'toggleOpen'])->name('store.open');
     Route::get('/store', [Business\StoreController::class, 'edit'])->name('store.edit');
     // POST (et non PUT) : envoi de fichiers en multipart.
@@ -180,6 +211,17 @@ Route::middleware(['auth', 'role:admin', 'approved'])->prefix('admin')->name('ad
     Route::get('/orders/export', [Admin\OrderController::class, 'export'])->name('orders.export');
     Route::get('/orders/{order}', [Admin\OrderController::class, 'show'])->name('orders.show');
     Route::post('/orders/{order}/relaunch', [Admin\OrderController::class, 'relaunch'])->name('orders.relaunch');
+    // Modération des avis (masquer le commentaire d'un avis abusif).
+    Route::get('/reviews', [Admin\ReviewController::class, 'index'])->name('reviews.index');
+    Route::patch('/reviews/{review}/visibility', [Admin\ReviewController::class, 'visibility'])->name('reviews.visibility');
+    // Codes promo (réduction financée par Gogab).
+    Route::get('/promo-codes', [Admin\PromoCodeController::class, 'index'])->name('promo-codes.index');
+    Route::post('/promo-codes', [Admin\PromoCodeController::class, 'store'])->name('promo-codes.store');
+    Route::put('/promo-codes/{promoCode}', [Admin\PromoCodeController::class, 'update'])->name('promo-codes.update');
+    Route::patch('/promo-codes/{promoCode}/toggle', [Admin\PromoCodeController::class, 'toggle'])->name('promo-codes.toggle');
+    // Finances : soldes (WalletService) et règlements des entreprises et livreurs.
+    Route::get('/finances', [Admin\FinanceController::class, 'index'])->name('finances.index');
+    Route::post('/finances/{user}/settle', [Admin\FinanceController::class, 'settle'])->name('finances.settle');
     Route::resource('stores', Admin\StoreController::class)->except('show');
     // Produits rattachés à une boutique : /admin/stores/{store}/products/create, /admin/products/{product}/edit…
     Route::resource('stores.products', Admin\ProductController::class)
@@ -193,6 +235,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/notifications/unread', [NotificationController::class, 'unread'])->name('notifications.unread');
     Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
     Route::post('/notifications/{id}/read', [NotificationController::class, 'read'])->name('notifications.read');
+    // Notifications push : abonner / désabonner l'appareil courant.
+    Route::post('/push/subscription', [PushSubscriptionController::class, 'store'])->name('push.subscribe');
+    Route::delete('/push/subscription', [PushSubscriptionController::class, 'destroy'])->name('push.unsubscribe');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

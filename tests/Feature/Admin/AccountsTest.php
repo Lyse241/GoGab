@@ -173,7 +173,7 @@ class AccountsTest extends TestCase
         return Order::create([
             'store_id' => $store->id,
             'client_id' => User::factory()->create(['name' => 'Client Commande'])->id,
-            'neighborhood_id' => Neighborhood::firstOrCreate(['name' => 'Louis'], ['zone' => 'Centre'])->id,
+            'neighborhood_id' => Neighborhood::firstOrCreate(['name' => 'Louis'], ['zone' => 'Libreville'])->id,
             'address_landmarks' => 'Près du marché',
             'subtotal' => 2500,
             'total_price' => 2500,
@@ -210,14 +210,14 @@ class AccountsTest extends TestCase
         $courier = $this->account('delivery', 'approved');
         $courier->deliveryProfile()->create([
             'vehicle_type' => VehicleType::Moto,
-            'base_neighborhood_id' => Neighborhood::create(['name' => 'Akanda', 'zone' => 'Nord'])->id,
+            'base_neighborhood_id' => Neighborhood::create(['name' => 'Akanda', 'zone' => 'Akanda'])->id,
             'is_available' => true,
         ]);
 
         $this->actingAs($this->admin)
             ->get("/admin/accounts/{$courier->id}")
             ->assertInertia(fn (Assert $page) => $page
-                ->where('deliveryProfile.base_zone', 'Nord')
+                ->where('deliveryProfile.base_zone', 'Akanda')
                 ->where('activity.is_available', true)
                 ->where('activity.products', null)
                 ->where('activity.orders_count', 0)

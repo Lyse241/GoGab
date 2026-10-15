@@ -44,7 +44,7 @@ export default function AccountActivity({ role, activity }) {
                                     <li key={product.id} className="flex items-center gap-3 rounded-xl p-2 ring-1 ring-gray-100">
                                         <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                                             {product.image && (
-                                                <img src={imageUrl(product.image)} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                                <img src={imageUrl(product.image, 'sm')} alt="" loading="lazy" className="h-full w-full object-cover" />
                                             )}
                                         </div>
                                         <div className="min-w-0 flex-1">

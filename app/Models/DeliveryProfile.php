@@ -20,6 +20,7 @@ class DeliveryProfile extends Model
         'plate_number',
         'license_number',
         'base_neighborhood_id',
+        'coverage_km',
         'is_available',
     ];
 
@@ -33,6 +34,7 @@ class DeliveryProfile extends Model
         return [
             'vehicle_type' => VehicleType::class,
             'is_available' => 'boolean',
+            'located_at' => 'datetime',
         ];
     }
 

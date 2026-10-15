@@ -16,10 +16,14 @@ class CategorySeeder extends Seeder
         $categories = [
             ['Restaurant', 'utensils'],
             ['Fast-food', 'sandwich'],
-            ['Pharmacie', 'pill'],
-            ['Épicerie & courses', 'shopping-basket'],
-            ['Boutique', 'shopping-bag'],
+            ['Desserts & glaces', 'ice-cream-cone'],
+            ['Boissons & jus', 'cup-soda'],
             ['Boulangerie', 'croissant'],
+            ['Épicerie & courses', 'shopping-basket'],
+            ['Fruits & légumes', 'apple'],
+            ['Boucherie & poissonnerie', 'beef'],
+            ['Pharmacie', 'pill'],
+            ['Boutique', 'shopping-bag'],
         ];
 
         foreach ($categories as $index => [$name, $icon]) {

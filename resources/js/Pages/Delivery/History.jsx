@@ -8,7 +8,7 @@ import Pagination from '@/Components/UI/Pagination';
 import DeliveryLayout from '@/Layouts/DeliveryLayout';
 import { formatFCFA } from '@/utils/format';
 import { Head } from '@inertiajs/react';
-import { History as HistoryIcon, MapPin, Megaphone, Store } from 'lucide-react';
+import { History as HistoryIcon, MapPin, Megaphone, Store, Wallet } from 'lucide-react';
 
 function Total({ label, value, highlight }) {
     return (
@@ -34,6 +34,10 @@ export default function History({ deliveries, earnings }) {
                 <Total label="Cette semaine" value={earnings.week} />
                 <Total label="Ce mois" value={earnings.month} />
             </section>
+
+            <Button href={route('delivery.wallet')} variant="outline" icon={Wallet} className="w-full">
+                Mon solde et espèces à remettre
+            </Button>
 
             {listLoading ? (
                     <SkeletonList />

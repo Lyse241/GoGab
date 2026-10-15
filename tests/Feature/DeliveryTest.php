@@ -40,7 +40,7 @@ class DeliveryTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Delivery/Offers')
-                ->where('zone', 'Centre')
+                ->where('zone', 'Libreville')
                 ->where('isAvailable', true)
                 ->has('offers', 1)
                 ->where('offers.0.id', $announcement->id)
@@ -65,7 +65,7 @@ class DeliveryTest extends TestCase
         // Livreur d'une autre zone : aucune annonce.
         $this->actingAs($this->farCourier)
             ->get('/delivery/offers')
-            ->assertInertia(fn (Assert $page) => $page->where('zone', 'Nord')->has('offers', 0));
+            ->assertInertia(fn (Assert $page) => $page->where('zone', 'Akanda')->has('offers', 0));
     }
 
     public function test_unavailable_courier_sees_no_announcement(): void

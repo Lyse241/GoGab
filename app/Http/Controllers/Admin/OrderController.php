@@ -146,7 +146,7 @@ class OrderController extends Controller
                 'relaunch' => $this->workflow->canRelaunch($order, $request->user()),
             ],
             'couriersInZone' => $order->status === OrderStatus::SearchingCourier
-                ? $this->workflow->couriersForZone($order->store?->neighborhood?->zone)->count()
+                ? $this->workflow->couriersForOrder($order)->count()
                 : null,
         ]);
     }

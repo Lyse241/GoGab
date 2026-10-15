@@ -10,7 +10,11 @@ import Textarea from '@/Components/UI/Textarea';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import { compressImage } from '@/utils/compressImage';
 import { Head, useForm } from '@inertiajs/react';
-import { Clock, FileLock2, ImageIcon, Phone, Save, Store } from 'lucide-react';
+import { Clock, FileLock2, ImageIcon, MapPin, Phone, Save, Store } from 'lucide-react';
+import { Suspense, lazy } from 'react';
+
+// Carte (Leaflet) chargée à la demande.
+const StorePinPicker = lazy(() => import('@/Components/Business/StorePinPicker'));
 
 /**
  * « Mon commerce » : fiche publique du commerce (nom, catégorie, contact, quartier, repères),
@@ -24,12 +28,18 @@ export default function Edit({ store, openingHours, categories, neighborhoods, l
         phone: store.phone ?? '',
         neighborhood_id: store.neighborhood_id ?? '',
         address_landmarks: store.address_landmarks ?? '',
+        latitude: store.latitude ?? '',
+        longitude: store.longitude ?? '',
         opening_hours: openingHours,
         logo: null,
         cover_image: null,
         remove_logo: false,
         remove_cover_image: false,
     });
+
+    // Point de départ de la carte : le centre du quartier choisi.
+    const neighborhood = neighborhoods.find((item) => String(item.id) === String(data.neighborhood_id));
+    const neighborhoodCenter = neighborhood?.latitude ? [Number(neighborhood.latitude), Number(neighborhood.longitude)] : undefined;
 
     // Les booléens voyagent en 1 / 0 dans un envoi multipart.
     transform((values) => ({
@@ -127,6 +137,23 @@ export default function Edit({ store, openingHours, categories, neighborhoods, l
                             error={errors.address_landmarks}
                         />
                     </div>
+                </Card>
+
+                <Card>
+                    <CardHeader
+                        title="Position exacte"
+                        description="Facultatif : placez votre commerce sur la carte pour que les livreurs et les clients le voient au bon endroit."
+                        action={<MapPin className="h-5 w-5 text-primary-600" aria-hidden="true" />}
+                    />
+                    <Suspense fallback={<div className="h-72 animate-pulse rounded-2xl bg-gray-100" aria-hidden="true" />}>
+                        <StorePinPicker
+                            latitude={data.latitude === '' ? null : data.latitude}
+                            longitude={data.longitude === '' ? null : data.longitude}
+                            center={neighborhoodCenter}
+                            error={errors.latitude ?? errors.longitude}
+                            onChange={(latitude, longitude) => setData((values) => ({ ...values, latitude: latitude ?? '', longitude: longitude ?? '' }))}
+                        />
+                    </Suspense>
                 </Card>
 
                 <Card>

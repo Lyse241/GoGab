@@ -12,41 +12,35 @@ use Illuminate\Support\Str;
 class StoreSeeder extends Seeder
 {
     /**
-     * Boutiques de démonstration (noms fictifs) à Libreville, sans compte entreprise.
+     * Commerces de démonstration (noms fictifs) à Libreville, sans compte entreprise : voir
+     * DemoCatalog (restaurants gabonais, fast-food, desserts, boissons, boulangeries, pharmacies,
+     * épiceries, marché frais, boucherie et poissonnerie).
      * Nécessite CategorySeeder et NeighborhoodSeeder.
      *
-     * Horaires variés pour la démo : fermés le dimanche, créneau passant minuit,
+     * Horaires variés pour la démo : fermés un jour de la semaine, créneaux passant minuit,
      * pharmacie 7j/7, et une supérette en fermeture temporaire (interrupteur manuel).
      */
     public function run(): void
     {
-        $stores = [
-            // [nom, catégorie, quartier, horaires, ouvert (interrupteur)]
-            ['Chez Maman Ngoye', 'restaurant', 'Nombakélé', StoreHours::everyDay('10:00', '22:00', [7]), true],
-            ['Le Braisé du Bord de Mer', 'restaurant', 'Louis', StoreHours::everyDay('18:00', '02:00', [1]), true],
-            ['Pharmacie du Bon Secours', 'pharmacie', 'Glass', StoreHours::everyDay('08:00', '21:00', [7]), true],
-            ['Pharmacie Santé Nzeng-Ayong', 'pharmacie', 'Nzeng-Ayong', StoreHours::everyDay('08:00', '22:00'), true],
-            ['Épicerie du Quartier Louis', 'epicerie-courses', 'Louis', StoreHours::everyDay('07:30', '21:30', [7]), true],
-            ['Supérette Akanda Express', 'epicerie-courses', 'Akanda', StoreHours::everyDay('08:00', '22:00'), false],
-            ["Boulangerie L'Épi d'Owendo", 'boulangerie', 'Owendo', StoreHours::everyDay('06:00', '20:00'), true],
-        ];
-
         $categories = Category::pluck('id', 'slug');
         $neighborhoods = Neighborhood::pluck('id', 'name');
 
-        foreach ($stores as [$name, $category, $neighborhood, $hours, $isOpen]) {
+        foreach (DemoCatalog::stores() as $data) {
             $store = Store::updateOrCreate(
-                ['name' => $name],
+                ['name' => $data['name']],
                 [
-                    'category_id' => $categories[$category],
-                    'neighborhood_id' => $neighborhoods[$neighborhood],
-                    'cover_image' => self::placeholder($name),
-                    'is_open' => $isOpen,
+                    'category_id' => $categories[$data['category']],
+                    'neighborhood_id' => $neighborhoods[$data['neighborhood']],
+                    'description' => $data['description'],
+                    'address_landmarks' => $data['landmarks'],
+                    'phone' => $data['phone'],
+                    'cover_image' => DemoCatalog::COVER_IMAGES."{$data['cover']}.jpg",
+                    'is_open' => $data['open'],
                     'is_active' => true,
                 ],
             );
 
-            StoreHours::sync($store, $hours);
+            StoreHours::sync($store, $data['hours']);
         }
     }
 

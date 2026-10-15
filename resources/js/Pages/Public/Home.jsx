@@ -1,5 +1,5 @@
 import SearchBar from '@/Components/Layout/SearchBar';
-import LazyImage from '@/Components/LazyImage';
+import StoreCover from '@/Components/StoreCover';
 import OpeningStatusBadge from '@/Components/OpeningStatusBadge';
 import Badge from '@/Components/UI/Badge';
 import Button from '@/Components/UI/Button';
@@ -11,7 +11,7 @@ import { categoryIcon } from '@/utils/categoryIcons';
 import { cn } from '@/utils/cn';
 import { imageUrl } from '@/utils/format';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { ArrowRight, Bike, Clock, LayoutGrid, MapPin, SearchX, Store, Tags } from 'lucide-react';
+import { ArrowRight, Bike, Clock, LayoutGrid, MapPin, SearchX, Star, Store, Tags } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 /**
@@ -114,15 +114,12 @@ function StoreCard({ store, nearness }) {
             href={route('stores.show', store.id)}
             className={cn(
                 'group flex flex-col overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-gray-100 transition duration-200 hover:-translate-y-0.5 hover:shadow-card-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                closed && 'opacity-75',
+                // Fermé : photo en niveaux de gris et fond neutre (le texte garde son contraste, pas d'opacité).
+                closed && 'bg-gray-50',
             )}
         >
             <div className="relative">
-                <LazyImage
-                    src={imageUrl(store.cover_image)}
-                    alt=""
-                    className={cn('aspect-[16/9] w-full', closed && 'grayscale')}
-                />
+                <StoreCover store={store} className={cn('aspect-[16/9] w-full', closed && 'grayscale')} />
                 {nearness < 2 && (
                     <Badge color="accent" size="sm" icon={MapPin} className="absolute left-3 top-3 shadow-sm">
                         {nearness === 0 ? 'Votre quartier' : 'Votre zone'}
@@ -141,6 +138,13 @@ function StoreCard({ store, nearness }) {
                 <p className="mt-0.5 truncate text-sm text-gray-500">
                     {[store.category, store.neighborhood].filter(Boolean).join(' · ')}
                 </p>
+                {store.rating !== null && (
+                    <p className="mt-1 flex items-center gap-1 text-sm text-gray-700">
+                        <Star className="h-4 w-4 fill-accent text-accent-600" aria-hidden="true" />
+                        <span className="font-semibold">{store.rating.toLocaleString('fr-FR')}</span>
+                        <span className="text-gray-500">({store.reviews_count})</span>
+                    </p>
+                )}
                 <OpeningStatusBadge isOpen={store.is_open_now} detail={store.status_detail} className="mt-3 max-w-full" />
                 <p className="mt-1.5 flex items-center gap-1.5 text-xs text-gray-500">
                     <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />

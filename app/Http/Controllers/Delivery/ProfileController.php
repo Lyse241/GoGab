@@ -8,6 +8,7 @@ use App\Http\Requests\Delivery\UpdateBaseNeighborhoodRequest;
 use App\Models\Document;
 use App\Models\Neighborhood;
 use App\Services\CourierProfileService;
+use App\Services\ReviewService;
 use App\Support\DocumentPresenter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,7 +45,11 @@ class ProfileController extends Controller
                 'plate_number' => $profile->plate_number,
                 'license_number' => $profile->license_number,
             ],
+            // Moyenne des notes données par les clients.
+            'rating' => app(ReviewService::class)->courierSummary($user),
             'baseNeighborhoodId' => $profile->base_neighborhood_id,
+            'coverageKm' => $profile->coverage_km,
+            'coverageOptions' => config('gogab.coverage.options'),
             'neighborhoods' => Neighborhood::orderBy('name')->get(['id', 'name', 'zone']),
             // Documents obligatoires (envoyés ou manquants), puis les autres documents envoyés.
             'documents' => [
@@ -81,6 +86,10 @@ class ProfileController extends Controller
             Neighborhood::findOrFail($request->validated('base_neighborhood_id')),
         );
 
-        return back()->with('success', "Quartier de base : {$profile->baseNeighborhood->name}. Vous recevez maintenant les offres de la zone {$profile->baseNeighborhood->zone}.");
+        if ($request->filled('coverage_km')) {
+            $profile = $this->courier->setCoverage($request->user(), (int) $request->validated('coverage_km'));
+        }
+
+        return back()->with('success', "Départ : {$profile->baseNeighborhood->name}, rayon de {$profile->coverage_km} km. Vous recevez les courses des commerces situés dans ce rayon.");
     }
 }

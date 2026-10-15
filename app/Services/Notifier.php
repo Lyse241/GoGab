@@ -38,6 +38,13 @@ class Notifier
 
         if ($recipients->isNotEmpty()) {
             Notification::send($recipients, new AppNotification($title, $message, self::relativeUrl($url), $type));
+
+            // Push sur les appareils abonnés (application fermée). Un échec ne remonte jamais.
+            try {
+                app(PushService::class)->send($recipients, $title, $message, self::relativeUrl($url));
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         return $recipients->count();

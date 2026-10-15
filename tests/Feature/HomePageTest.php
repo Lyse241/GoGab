@@ -107,7 +107,7 @@ class HomePageTest extends TestCase
     public function test_store_cards_carry_logo_neighborhood_zone_and_todays_hours(): void
     {
         $this->at('2026-09-28 10:00'); // lundi
-        $louis = Neighborhood::create(['name' => 'Louis', 'zone' => 'Centre']);
+        $louis = Neighborhood::create(['name' => 'Louis', 'zone' => 'Libreville']);
         $store = Store::factory()->withoutHours()->create(['neighborhood_id' => $louis->id, 'logo' => 'stores/logos/logo.png']);
         StoreHours::sync($store, StoreHours::everyDay('08:00', '22:00', [7]));
 
@@ -116,7 +116,7 @@ class HomePageTest extends TestCase
                 ->where('stores.0.logo', 'stores/logos/logo.png')
                 ->where('stores.0.neighborhood_id', $louis->id)
                 ->where('stores.0.neighborhood', 'Louis')
-                ->where('stores.0.zone', 'Centre')
+                ->where('stores.0.zone', 'Libreville')
                 ->where('stores.0.today_hours', '08h00 – 22h00'));
 
         $this->at('2026-09-27 10:00'); // dimanche : jour de repos
@@ -137,7 +137,7 @@ class HomePageTest extends TestCase
 
     public function test_logged_in_user_shares_his_default_neighborhood(): void
     {
-        $akanda = Neighborhood::create(['name' => 'Akanda', 'zone' => 'Nord']);
+        $akanda = Neighborhood::create(['name' => 'Akanda', 'zone' => 'Akanda']);
         $client = User::factory()->create(['role' => 'client', 'neighborhood_id' => $akanda->id]);
 
         $this->actingAs($client)->get('/')

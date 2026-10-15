@@ -5,6 +5,7 @@ namespace App\Http\Requests\Business;
 use App\Http\Requests\Concerns\ValidatesOpeningHours;
 use App\Models\Category;
 use App\Models\Neighborhood;
+use App\Services\TrackingService;
 use App\Support\PhoneNumber;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -33,6 +34,8 @@ class UpdateStoreRequest extends FormRequest
         $clean = fn ($value) => is_string($value) && trim($value) !== '' ? trim($value) : null;
 
         $this->merge([
+            'latitude' => $this->filled('latitude') ? $this->input('latitude') : null,
+            'longitude' => $this->filled('longitude') ? $this->input('longitude') : null,
             'name' => $clean($this->input('name')),
             'description' => $clean($this->input('description')),
             'address_landmarks' => $clean($this->input('address_landmarks')),
@@ -52,6 +55,16 @@ class UpdateStoreRequest extends FormRequest
             'phone' => ['required', 'string', 'regex:/^0\d{2} \d{2} \d{2} \d{2}$/'],
             'neighborhood_id' => ['required', 'integer', Rule::exists(Neighborhood::class, 'id')],
             'address_landmarks' => ['required', 'string', 'min:10', 'max:500'],
+            // Épingle exacte du commerce (facultative) : les deux coordonnées ensemble, au Gabon.
+            'latitude' => [
+                'nullable', 'numeric', 'between:-90,90', 'required_with:longitude',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    if ($value !== null && ! TrackingService::inGabon((float) $value, (float) $this->input('longitude'))) {
+                        $fail('Cette position est en dehors du Gabon.');
+                    }
+                },
+            ],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
             ...self::openingHoursRules(required: true),
             'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.self::LOGO_MAX_KB],
             'cover_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.self::COVER_MAX_KB, 'dimensions:min_width=400,min_height=200'],

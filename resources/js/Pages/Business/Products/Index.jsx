@@ -191,7 +191,7 @@ export default function Index({ products, sections, filters, noSection, totals }
                                                     <li key={product.id} className={cn('flex items-center gap-3 p-3 sm:p-4', !available && 'bg-gray-50')}>
                                                         <div className={cn('flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-100', !available && 'opacity-50')}>
                                                             {product.image ? (
-                                                                <img src={imageUrl(product.image)} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                                                <img src={imageUrl(product.image, 'sm')} alt="" loading="lazy" className="h-full w-full object-cover" />
                                                             ) : (
                                                                 <ImageOff className="h-6 w-6 text-gray-300" aria-hidden="true" />
                                                             )}

@@ -54,7 +54,7 @@ class OffersTest extends TestCase
         $old = $this->announce(['subtotal' => 5500, 'total_price' => 6500, 'cash_given' => 10000], minutesAgo: 7);
         $mobile = $this->announce(['payment_method' => 'airtel_money', 'cash_given' => null], minutesAgo: 3);
 
-        // Commerce d'une autre zone (Nord) : jamais proposé au livreur du Centre.
+        // Commerce d'une autre zone (Akanda) : jamais proposé au livreur de Libreville.
         $northStore = Store::factory()->create(['neighborhood_id' => Neighborhood::firstWhere('name', 'Akanda')->id]);
         $north = $this->announce(['store_id' => $northStore->id]);
 
@@ -83,7 +83,32 @@ class OffersTest extends TestCase
 
         $this->actingAs($this->farCourier)
             ->get('/delivery/offers')
-            ->assertInertia(fn (Assert $page) => $page->where('zone', 'Nord')->has('offers', 1)->where('offers.0.id', $north->id));
+            ->assertInertia(fn (Assert $page) => $page->where('zone', 'Akanda')->has('offers', 1)->where('offers.0.id', $north->id));
+    }
+
+    public function test_a_courier_registered_for_a_commune_sees_the_offers_of_every_neighborhood_of_that_commune(): void
+    {
+        $angondje = Neighborhood::create(['name' => 'Angondjé', 'zone' => 'Akanda']);
+        $okala = Neighborhood::create(['name' => 'Okala', 'zone' => 'Akanda']);
+        $glass = Neighborhood::firstWhere('name', 'Glass');
+        // Livreur rattaché à Akanda (quartier « Akanda ») : il doit voir Angondjé ET Okala.
+        $this->assertSame('Akanda', $this->farCourier->deliveryProfile->baseNeighborhood->zone);
+
+        $inAngondje = $this->announce(['store_id' => Store::factory()->create(['neighborhood_id' => $angondje->id])->id]);
+        $inOkala = $this->announce(['store_id' => Store::factory()->create(['neighborhood_id' => $okala->id])->id]);
+        $inGlass = $this->announce(['store_id' => Store::factory()->create(['neighborhood_id' => $glass->id])->id]);
+
+        $this->actingAs($this->farCourier)
+            ->get('/delivery/offers')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('zone', 'Akanda')
+                ->has('offers', 2)
+                ->where('offers', fn ($offers) => collect($offers)->pluck('id')->sort()->values()->all() === collect([$inAngondje->id, $inOkala->id])->sort()->values()->all()));
+
+        // Et un livreur de Libreville (Glass) voit la course de Glass mais pas celles d'Akanda.
+        $this->actingAs($this->courier)
+            ->get('/delivery/offers')
+            ->assertInertia(fn (Assert $page) => $page->where('offers', fn ($offers) => collect($offers)->pluck('id')->contains($inGlass->id) && ! collect($offers)->pluck('id')->contains($inOkala->id)));
     }
 
     public function test_accepting_assigns_the_course_notifies_client_and_business_and_redirects_to_the_current_screen(): void

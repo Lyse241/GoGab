@@ -41,6 +41,54 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Couverture des livreurs
+    |--------------------------------------------------------------------------
+    |
+    | Chaque livreur choisit un rayon (km à vol d'oiseau autour de son quartier de départ) et reçoit
+    | les courses des commerces situés dans ce rayon. Une annonce restée sans livreur après
+    | `widen_after_minutes` est élargie à tous les livreurs disponibles à moins de `widened_km`
+    | (le Grand Libreville) : App\Services\CourierCoverage.
+    |
+    */
+
+    'coverage' => [
+        'options' => [5, 10, 15, 25],
+        'default_km' => (int) env('GOGAB_COVERAGE_DEFAULT_KM', 10),
+        'widen_after_minutes' => (int) env('GOGAB_WIDEN_AFTER_MINUTES', 5),
+        'widened_km' => (int) env('GOGAB_WIDENED_KM', 40),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Commission de la plateforme
+    |--------------------------------------------------------------------------
+    |
+    | Pourcentage prélevé sur le sous-total (hors frais de livraison) de chaque commande
+    | livrée (App\Services\WalletService). Les frais de livraison reviennent au livreur.
+    |
+    */
+
+    'commission_rate' => (float) env('GOGAB_COMMISSION_RATE', 15),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Notifications push (Web Push)
+    |--------------------------------------------------------------------------
+    |
+    | Clés VAPID générées par `php artisan gogab:vapid --write`. Sans clés, les push sont
+    | désactivés (les notifications in-app continuent). `subject` : contact exigé par les
+    | services de notification (adresse https:// ou mailto:).
+    |
+    */
+
+    'push' => [
+        'public_key' => env('VAPID_PUBLIC_KEY'),
+        'private_key' => env('VAPID_PRIVATE_KEY'),
+        'subject' => env('VAPID_SUBJECT', env('APP_URL', 'http://localhost')),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Commande bloquée en recherche de livreur
     |--------------------------------------------------------------------------
     |

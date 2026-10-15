@@ -40,8 +40,8 @@ class DesignSystemTest extends TestCase
 
     public function test_neighborhoods_and_role_label_are_shared_for_the_header(): void
     {
-        Neighborhood::create(['name' => 'Louis', 'zone' => 'Centre']);
-        Neighborhood::create(['name' => 'Akanda', 'zone' => 'Nord']);
+        Neighborhood::create(['name' => 'Louis', 'zone' => 'Libreville']);
+        Neighborhood::create(['name' => 'Akanda', 'zone' => 'Akanda']);
 
         $this->actingAs(User::factory()->create(['role' => 'delivery']))
             ->get('/delivery')
@@ -49,6 +49,6 @@ class DesignSystemTest extends TestCase
                 ->where('auth.role', 'delivery')
                 ->where('auth.role_label', 'Livreur')
                 ->has('neighborhoods', 2)
-                ->where('neighborhoods.0', fn ($neighborhood) => $neighborhood['name'] === 'Akanda' && $neighborhood['zone'] === 'Nord'));
+                ->where('neighborhoods.0', fn ($neighborhood) => $neighborhood['name'] === 'Akanda' && $neighborhood['zone'] === 'Akanda'));
     }
 }

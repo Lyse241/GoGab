@@ -63,13 +63,21 @@ export function formatFileSize(bytes) {
 }
 
 /**
- * URL d'une image : les URLs complètes (placeholders) sont gardées telles quelles,
- * les chemins locaux (fichiers envoyés) passent par /storage.
+ * URL d'une image : les URLs complètes (placeholders) et les chemins absolus du site
+ * (photos de démonstration : /images/demo/…) sont gardés tels quels, les chemins locaux
+ * (fichiers envoyés) passent par /storage.
+ *
+ * variant = 'sm' : version allégée (miniatures, cartes de liste) quand elle existe, c'est-à-dire pour
+ * les photos de démonstration (`x.jpg` → `x-sm.jpg`) ; les autres images gardent leur taille.
  */
-export function imageUrl(path) {
+export function imageUrl(path, variant) {
     if (!path) {
         return null;
     }
 
-    return /^(https?:|blob:|data:)/.test(path) ? path : `/storage/${path}`;
+    if (path.startsWith('/') && variant === 'sm' && path.startsWith('/images/demo/')) {
+        return path.replace(/\.jpg$/, '-sm.jpg');
+    }
+
+    return /^(https?:|blob:|data:|\/)/.test(path) ? path : `/storage/${path}`;
 }

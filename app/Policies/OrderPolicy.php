@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\User;
 use App\Services\OrderWorkflow;
 use App\Services\ReportService;
+use App\Services\ReviewService;
 
 /**
  * Qui voit quelle commande. Les changements de statut sont contrôlés par OrderWorkflow.
@@ -41,6 +42,11 @@ class OrderPolicy
      * « Signaler un problème » : seulement une partie de la commande (client, entreprise du
      * commerce, livreur assigné), compte validé.
      */
+    public function review(User $user, Order $order): bool
+    {
+        return app(ReviewService::class)->canReview($order, $user);
+    }
+
     public function report(User $user, Order $order): bool
     {
         return $user->isApproved() && app(ReportService::class)->parties($order, $user)->isNotEmpty();

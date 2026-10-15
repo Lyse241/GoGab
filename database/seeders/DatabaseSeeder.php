@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             ProductSeeder::class,
             OpeningHoursSeeder::class,
             TestAccountsSeeder::class,
+            DemoMerchantSeeder::class,
         ]);
     }
 }

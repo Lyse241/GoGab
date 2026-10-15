@@ -40,7 +40,7 @@ class StorePageAndSearchTest extends TestCase
             'description' => 'Cuisine gabonaise maison.',
             'logo' => 'stores/logos/logo.png',
             'address_landmarks' => 'En face du marché',
-            'neighborhood_id' => Neighborhood::create(['name' => 'Nombakélé', 'zone' => 'Centre'])->id,
+            'neighborhood_id' => Neighborhood::create(['name' => 'Nombakélé', 'zone' => 'Libreville'])->id,
         ]);
         StoreHours::sync($store, StoreHours::everyDay('08:00', '22:00', [7]));
 
@@ -53,7 +53,7 @@ class StorePageAndSearchTest extends TestCase
                 ->where('store.description', 'Cuisine gabonaise maison.')
                 ->where('store.logo', 'stores/logos/logo.png')
                 ->where('store.neighborhood', 'Nombakélé')
-                ->where('store.zone', 'Centre')
+                ->where('store.zone', 'Libreville')
                 ->where('store.address_landmarks', 'En face du marché')
                 ->where('store.is_open_now', true)
                 ->where('store.today', 1)

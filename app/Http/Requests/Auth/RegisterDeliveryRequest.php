@@ -77,6 +77,7 @@ class RegisterDeliveryRequest extends FormRequest
                     : ['nullable'],
                 'license_number' => $needsLicense ? ['required', 'string', 'max:50'] : ['nullable'],
                 'base_neighborhood_id' => ['required', 'integer', Rule::exists(Neighborhood::class, 'id')],
+                'coverage_km' => ['nullable', 'integer', Rule::in(config('gogab.coverage.options'))],
             ],
             3 => self::documentRules($vehicle),
             default => [],
@@ -132,7 +133,7 @@ class RegisterDeliveryRequest extends FormRequest
             'plate_number.regex' => 'Plaque invalide : lettres, chiffres, espaces ou tirets (ex. GA-1234-LBV).',
             'plate_number.unique' => 'Cette plaque est déjà enregistrée pour un autre livreur.',
             'license_number.required' => 'Indiquez le numéro de votre permis de conduire.',
-            'base_neighborhood_id.required' => 'Choisissez le quartier où vous comptez travailler.',
+            'base_neighborhood_id.required' => 'Choisissez la commune où vous comptez travailler.',
             'base_neighborhood_id.exists' => 'Ce quartier n’est pas desservi.',
             'documents.required' => 'Ajoutez les documents demandés.',
         ];

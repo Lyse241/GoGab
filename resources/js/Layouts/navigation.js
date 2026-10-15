@@ -12,11 +12,14 @@ import {
     ShieldAlert,
     ShoppingBag,
     Siren,
+    Star,
     Store,
     Tags,
+    Ticket,
     UserCheck,
     UserRound,
     Users,
+    Wallet,
 } from 'lucide-react';
 
 /**
@@ -51,6 +54,9 @@ export const navigation = {
         { route: 'admin.categories.index', label: 'Catégories', icon: Tags, active: ['admin.categories.*'] },
         { route: 'admin.neighborhoods.index', label: 'Quartiers', icon: MapPin, active: ['admin.neighborhoods.*'] },
         { route: 'admin.orders.index', label: 'Commandes', icon: ReceiptText, active: ['admin.orders.*'] },
+        { route: 'admin.promo-codes.index', label: 'Codes promo', shortLabel: 'Promos', icon: Ticket, active: ['admin.promo-codes.*'] },
+        { route: 'admin.reviews.index', label: 'Avis', icon: Star, active: ['admin.reviews.*'] },
+        { route: 'admin.finances.index', label: 'Finances', icon: Wallet, active: ['admin.finances.*'] },
         { route: 'admin.reports.index', label: 'Signalements', icon: Siren, active: ['admin.reports.*'], badge: 'open_reports' },
         { route: 'admin.moderation.index', label: 'Modération', icon: ShieldAlert, active: ['admin.moderation.*'] },
         { route: 'profile.edit', label: 'Mon profil', icon: UserRound },
@@ -59,6 +65,8 @@ export const navigation = {
         { route: 'business.dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
         { route: 'business.orders.index', label: 'Commandes', icon: ReceiptText, active: ['business.orders.*'], badge: 'new_orders' },
         { route: 'business.products.index', label: 'Produits', icon: Package, active: ['business.products.*'] },
+        { route: 'business.reviews.index', label: 'Avis', icon: Star },
+        { route: 'business.wallet', label: 'Mon solde', shortLabel: 'Solde', icon: Wallet },
         { route: 'business.store.edit', label: 'Mon commerce', shortLabel: 'Commerce', icon: Store, active: ['business.store.*'] },
         { route: 'profile.edit', label: 'Mon profil', icon: UserRound },
     ],

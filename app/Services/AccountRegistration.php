@@ -92,6 +92,7 @@ class AccountRegistration
                     'plate_number' => $vehicle->requiresLicense() ? $data['plate_number'] : null,
                     'license_number' => $vehicle->requiresLicense() ? $data['license_number'] : null,
                     'base_neighborhood_id' => $data['base_neighborhood_id'],
+                    'coverage_km' => $data['coverage_km'] ?? config('gogab.coverage.default_km'),
                     'is_available' => false,
                 ]);
 

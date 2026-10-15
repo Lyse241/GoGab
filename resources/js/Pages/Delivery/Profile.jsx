@@ -1,12 +1,13 @@
+import CoverageSelect from '@/Components/CoverageSelect';
 import NeighborhoodSelect from '@/Components/NeighborhoodSelect';
+import StarRating from '@/Components/Reviews/StarRating';
 import Badge from '@/Components/UI/Badge';
 import Button from '@/Components/UI/Button';
 import Card, { CardHeader } from '@/Components/UI/Card';
 import StatusBadge from '@/Components/UI/StatusBadge';
 import DeliveryLayout from '@/Layouts/DeliveryLayout';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import { Bike, ExternalLink, FileText, MapPin, Pencil, Save, Upload, UserRound } from 'lucide-react';
-import { useMemo } from 'react';
+import { Bike, ExternalLink, FileText, MapPin, Pencil, Save, Star, Upload, UserRound } from 'lucide-react';
 
 function Row({ label, children }) {
     return (
@@ -21,16 +22,11 @@ function Row({ label, children }) {
  * Profil du livreur : informations personnelles, véhicule, quartier de base (zone des offres)
  * et statut de chaque document. Nom, e-mail, téléphone et mot de passe : page /profile.
  */
-export default function Profile({ account, vehicle, baseNeighborhoodId, neighborhoods, documents }) {
+export default function Profile({ account, vehicle, rating, baseNeighborhoodId, coverageKm, coverageOptions, neighborhoods, documents }) {
     const { courier } = usePage().props;
-    const form = useForm({ base_neighborhood_id: baseNeighborhoodId ?? '' });
+    const form = useForm({ base_neighborhood_id: baseNeighborhoodId ?? '', coverage_km: coverageKm ?? 10 });
 
-    // Zone du quartier choisi dans la liste (avant enregistrement).
-    const selectedZone = useMemo(
-        () => neighborhoods.find((neighborhood) => String(neighborhood.id) === String(form.data.base_neighborhood_id))?.zone,
-        [neighborhoods, form.data.base_neighborhood_id],
-    );
-    const changed = String(form.data.base_neighborhood_id) !== String(baseNeighborhoodId ?? '');
+    const changed = String(form.data.base_neighborhood_id) !== String(baseNeighborhoodId ?? '') || Number(form.data.coverage_km) !== Number(coverageKm ?? 10);
 
     const submit = (event) => {
         event.preventDefault();
@@ -44,15 +40,15 @@ export default function Profile({ account, vehicle, baseNeighborhoodId, neighbor
             {/* Zone d'activité */}
             <Card>
                 <CardHeader
-                    title="Zone d’activité"
-                    description="Vous recevez les offres des commerces situés dans la zone de votre quartier de base."
+                    title="Zone de couverture"
+                    description="Vous recevez les offres des commerces situés dans votre rayon autour de votre quartier de départ."
                     action={<MapPin className="h-5 w-5 text-gray-400" aria-hidden="true" />}
                 />
                 <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-secondary-50 px-3 py-2.5 text-sm">
-                    <span className="text-gray-600">Zone actuelle :</span>
+                    <span className="text-gray-600">Couverture actuelle :</span>
                     {courier?.zone ? (
                         <span className="font-semibold text-secondary-900">
-                            {courier.zone} <span className="font-normal text-gray-600">({courier.base_neighborhood})</span>
+                            {courier.base_neighborhood} · {courier.coverage_km} km
                         </span>
                     ) : (
                         <span className="font-semibold text-danger-700">aucune</span>
@@ -61,16 +57,23 @@ export default function Profile({ account, vehicle, baseNeighborhoodId, neighbor
                 <form onSubmit={submit} className="space-y-3">
                     <NeighborhoodSelect
                         id="base_neighborhood_id"
-                        label="Quartier de base"
+                        label="Quartier de départ"
                         neighborhoods={neighborhoods}
                         value={form.data.base_neighborhood_id}
                         onChange={(event) => form.setData('base_neighborhood_id', event.target.value)}
                         error={form.errors.base_neighborhood_id}
-                        hint={changed && selectedZone ? `Nouvelle zone d’activité : ${selectedZone}` : undefined}
                         required
                     />
+                    <CoverageSelect
+                        id="coverage_km"
+                        options={coverageOptions}
+                        value={form.data.coverage_km}
+                        onChange={(km) => form.setData('coverage_km', km)}
+                        error={form.errors.coverage_km}
+                        neighborhood={neighborhoods.find((n) => String(n.id) === String(form.data.base_neighborhood_id))?.name}
+                    />
                     <Button type="submit" icon={Save} loading={form.processing} disabled={!changed} fullWidth>
-                        Enregistrer le quartier
+                        Enregistrer ma couverture
                     </Button>
                 </form>
             </Card>
@@ -96,6 +99,21 @@ export default function Profile({ account, vehicle, baseNeighborhoodId, neighbor
             </Card>
 
             {/* Véhicule */}
+            <Card>
+                <CardHeader title="Mes notes" action={<Star className="h-5 w-5 text-gray-400" aria-hidden="true" />} />
+                {rating.average === null ? (
+                    <p className="mt-2 text-sm text-gray-500">Aucune note pour l’instant : elles apparaissent après vos livraisons.</p>
+                ) : (
+                    <p className="mt-2 flex items-center gap-2">
+                        <StarRating value={rating.average} />
+                        <span className="text-lg font-bold text-secondary-900">{rating.average.toLocaleString('fr-FR')}</span>
+                        <span className="text-sm text-gray-500">
+                            ({rating.count} note{rating.count > 1 ? 's' : ''})
+                        </span>
+                    </p>
+                )}
+            </Card>
+
             <Card>
                 <CardHeader title="Véhicule" action={<Bike className="h-5 w-5 text-gray-400" aria-hidden="true" />} />
                 <dl className="divide-y divide-gray-100">

@@ -23,22 +23,22 @@ class NeighborhoodTest extends TestCase
 
     public function test_only_admins_can_manage_neighborhoods(): void
     {
-        $neighborhood = Neighborhood::create(['name' => 'Akanda', 'zone' => 'Nord']);
+        $neighborhood = Neighborhood::create(['name' => 'Akanda', 'zone' => 'Akanda']);
 
         foreach (['client', 'delivery', 'business'] as $role) {
             $user = User::factory()->create(['role' => $role]);
 
             $this->actingAs($user)->get('/admin/neighborhoods')->assertSessionHas('error');
-            $this->actingAs($user)->put("/admin/neighborhoods/{$neighborhood->id}", ['name' => 'Akanda', 'zone' => 'Sud']);
+            $this->actingAs($user)->put("/admin/neighborhoods/{$neighborhood->id}", ['name' => 'Akanda', 'zone' => 'Owendo']);
         }
 
-        $this->assertSame('Nord', $neighborhood->fresh()->zone);
+        $this->assertSame('Akanda', $neighborhood->fresh()->zone);
     }
 
     public function test_index_lists_neighborhoods_with_zones_and_counts(): void
     {
-        $akanda = Neighborhood::create(['name' => 'Akanda', 'zone' => 'Nord']);
-        Neighborhood::create(['name' => 'Owendo', 'zone' => 'Sud']);
+        $akanda = Neighborhood::create(['name' => 'Akanda', 'zone' => 'Akanda']);
+        Neighborhood::create(['name' => 'Owendo', 'zone' => 'Owendo']);
         User::factory()->create(['role' => 'client', 'neighborhood_id' => $akanda->id]);
 
         $this->actingAs($this->admin)
@@ -49,7 +49,7 @@ class NeighborhoodTest extends TestCase
                 ->where('zones', Neighborhood::ZONES)
                 ->has('neighborhoods', 2)
                 ->where('neighborhoods.0.name', 'Akanda')
-                ->where('neighborhoods.0.zone', 'Nord')
+                ->where('neighborhoods.0.zone', 'Akanda')
                 ->where('neighborhoods.0.users_count', 1)
                 ->where('neighborhoods.0.stores_count', 0)
                 ->where('neighborhoods.0.delivery_profiles_count', 0));
@@ -58,16 +58,16 @@ class NeighborhoodTest extends TestCase
     public function test_admin_adds_a_neighborhood(): void
     {
         $this->actingAs($this->admin)
-            ->post('/admin/neighborhoods', ['name' => ' Nzeng  Ayong ', 'zone' => 'Est'])
+            ->post('/admin/neighborhoods', ['name' => ' Nzeng  Ayong ', 'zone' => 'Libreville'])
             ->assertSessionHasNoErrors()
             ->assertSessionHas('success');
 
-        $this->assertDatabaseHas('neighborhoods', ['name' => 'Nzeng Ayong', 'zone' => 'Est']);
+        $this->assertDatabaseHas('neighborhoods', ['name' => 'Nzeng Ayong', 'zone' => 'Libreville']);
     }
 
     public function test_name_must_be_unique_and_zone_known(): void
     {
-        Neighborhood::create(['name' => 'Akanda', 'zone' => 'Nord']);
+        Neighborhood::create(['name' => 'Akanda', 'zone' => 'Akanda']);
 
         $this->actingAs($this->admin)
             ->post('/admin/neighborhoods', ['name' => 'Akanda', 'zone' => 'Ouest'])
@@ -78,20 +78,20 @@ class NeighborhoodTest extends TestCase
 
     public function test_changing_the_zone_is_taken_into_account_everywhere(): void
     {
-        $neighborhood = Neighborhood::create(['name' => 'Owendo', 'zone' => 'Sud']);
+        $neighborhood = Neighborhood::create(['name' => 'Owendo', 'zone' => 'Owendo']);
 
         $this->actingAs($this->admin)
-            ->put("/admin/neighborhoods/{$neighborhood->id}", ['name' => 'Owendo', 'zone' => 'Centre'])
+            ->put("/admin/neighborhoods/{$neighborhood->id}", ['name' => 'Owendo', 'zone' => 'Libreville'])
             ->assertSessionHasNoErrors()
-            ->assertSessionHas('success', '« Owendo » passe de la zone Sud à la zone Centre.');
+            ->assertSessionHas('success', '« Owendo » passe de la zone Owendo à la zone Libreville.');
 
-        $this->assertSame('Centre', $neighborhood->fresh()->zone);
+        $this->assertSame('Libreville', $neighborhood->fresh()->zone);
 
         // La nouvelle zone est celle proposée à l'inscription.
         auth()->logout();
         $this->get('/register/delivery')
             ->assertInertia(fn (Assert $page) => $page
                 ->where('neighborhoods.0.name', 'Owendo')
-                ->where('neighborhoods.0.zone', 'Centre'));
+                ->where('neighborhoods.0.zone', 'Libreville'));
     }
 }

@@ -5,10 +5,10 @@ import { usePage } from '@inertiajs/react';
 import { Check, ChevronDown, MapPin } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-const ZONE_ORDER = ['Nord', 'Centre', 'Est', 'Sud'];
+const ZONE_ORDER = ['Libreville', 'Akanda', 'Owendo'];
 
 /**
- * Bouton « Livrer à … » du header : choix du quartier, regroupé par zone de Libreville.
+ * Bouton « Livrer à … » du header : choix du quartier, regroupé par commune.
  */
 export default function NeighborhoodSelector({ className }) {
     const { neighborhoods = [] } = usePage().props;
@@ -61,13 +61,13 @@ export default function NeighborhoodSelector({ className }) {
                 open={open}
                 onClose={() => setOpen(false)}
                 title="Votre quartier"
-                description="Les commerces et livreurs proches sont ceux de votre zone."
+                description="Les commerces et livreurs proches sont ceux de votre commune."
                 size="lg"
             >
                 <div className="space-y-5">
                     {zones.map(([zone, items]) => (
                         <section key={zone}>
-                            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Zone {zone}</h3>
+                            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Commune {zone}</h3>
                             <ul className="mt-2 grid grid-cols-2 gap-2">
                                 {items.map((neighborhood) => {
                                     const active = neighborhood.id === neighborhoodId;

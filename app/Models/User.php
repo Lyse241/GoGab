@@ -247,6 +247,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Mouvements du grand livre (entreprise, livreur) : voir App\Services\WalletService.
+     */
+    public function walletEntries(): HasMany
+    {
+        return $this->hasMany(WalletEntry::class);
+    }
+
+    /**
      * Commandes passées par l'utilisateur (rôle client).
      */
     public function orders(): HasMany

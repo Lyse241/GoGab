@@ -53,15 +53,15 @@ export default function Index({ neighborhoods, zones }) {
                 />
 
                 <p className="text-sm text-gray-600">
-                    Les livreurs d’une zone reçoivent les commandes des commerces situés dans les quartiers de
-                    cette zone.
+                    Les livreurs d’une commune reçoivent les commandes des commerces situés dans tous les quartiers de
+                    cette commune.
                 </p>
 
                 <div className="grid gap-4 md:grid-cols-2">
                     {groups.map(({ zone, items }) => (
                         <Card key={zone} padding="none">
                             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-                                <h2 className="font-semibold text-secondary-900">Zone {zone}</h2>
+                                <h2 className="font-semibold text-secondary-900">Commune {zone}</h2>
                                 <Badge size="sm">{plural(items.length, 'quartier')}</Badge>
                             </div>
                             {items.length === 0 ? (
@@ -156,9 +156,9 @@ function NeighborhoodForm({ neighborhood, zones, onClose }) {
                 />
                 <Select
                     id="neighborhood-zone"
-                    label="Zone"
+                    label="Commune"
                     required
-                    placeholder="Choisir une zone"
+                    placeholder="Choisir une commune"
                     options={zones.map((zone) => ({ value: zone, label: zone }))}
                     value={form.data.zone}
                     onChange={(e) => form.setData('zone', e.target.value)}

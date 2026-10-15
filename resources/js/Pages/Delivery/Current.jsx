@@ -5,6 +5,7 @@ import Checkbox from '@/Components/UI/Checkbox';
 import ConfirmDialog from '@/Components/UI/ConfirmDialog';
 import EmptyState from '@/Components/UI/EmptyState';
 import Modal from '@/Components/UI/Modal';
+import LocationReporter from '@/Components/Tracking/LocationReporter';
 import Stepper from '@/Components/UI/Stepper';
 import DeliveryLayout from '@/Layouts/DeliveryLayout';
 import { cn } from '@/utils/cn';
@@ -106,10 +107,11 @@ function CashPanel({ order }) {
  * (en bas, à portée de pouce). Récupération et remise demandent une confirmation ; en cash, la
  * remise exige de cocher « Montant encaissé » (le serveur le revérifie).
  */
-export default function Current({ order, reporting }) {
+export default function Current({ order, reporting, tracking }) {
     const [confirming, setConfirming] = useState(false);
     const [cashCollected, setCashCollected] = useState(false);
     const [busy, setBusy] = useState(false);
+    const [arriving, setArriving] = useState(false);
     const [error, setError] = useState(null);
 
     // Annulation par l'admin, etc. : l'écran suit l'état réel de la course.
@@ -170,7 +172,35 @@ export default function Current({ order, reporting }) {
                 <Stepper steps={STEPS} current={step} />
             </Card>
 
+            {/* Le client suit la course sur sa carte tant qu'elle est ouverte. */}
+            <LocationReporter orderId={order.id} status={order.status} store={tracking?.store} destination={tracking?.destination} />
+
             {action && <p className="rounded-2xl bg-primary-50 px-4 py-3 text-sm font-medium text-primary-900 ring-1 ring-primary-200">{action.hint(order)}</p>}
+
+            {/* Phase de retrait : le livreur prévient le commerce (et le client) dès qu'il est sur place. */}
+            {order.status === 'livreur_assigne' &&
+                (order.arrived_at_store ? (
+                    <p className="flex items-center gap-2 rounded-2xl bg-success-50 px-4 py-3 text-sm font-medium text-success-800 ring-1 ring-success-200">
+                        <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" />
+                        Arrivée signalée à {order.arrived_at_store} : le commerce vous remet la commande.
+                    </p>
+                ) : (
+                    <Button
+                        variant="outline"
+                        fullWidth
+                        icon={Store}
+                        loading={arriving}
+                        onClick={() =>
+                            router.post(route('delivery.orders.arrived-at-store', order.id), {}, {
+                                preserveScroll: true,
+                                onStart: () => setArriving(true),
+                                onFinish: () => setArriving(false),
+                            })
+                        }
+                    >
+                        Je suis arrivé au commerce
+                    </Button>
+                ))}
 
             <CashPanel order={order} />
 

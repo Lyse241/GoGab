@@ -39,7 +39,7 @@ class SearchController extends Controller
 
         $stores = Store::query()
             ->visible()
-            ->with(['category:id,name', 'neighborhood:id,name', 'openingHours', 'owner:id,account_status'])
+            ->with(['category:id,name,icon', 'neighborhood:id,name', 'openingHours', 'owner:id,account_status'])
             ->where(fn (Builder $query) => $query
                 ->where('name', 'like', $like)
                 ->orWhere('description', 'like', $like)
@@ -55,7 +55,7 @@ class SearchController extends Controller
                 ->orWhere('description', 'like', $like))
             ->with(['store' => fn ($query) => $query
                 ->select(['id', 'owner_id', 'name', 'category_id', 'neighborhood_id', 'logo', 'cover_image', 'is_open', 'is_active'])
-                ->with(['category:id,name', 'neighborhood:id,name', 'openingHours', 'owner:id,account_status'])])
+                ->with(['category:id,name,icon', 'neighborhood:id,name', 'openingHours', 'owner:id,account_status'])])
             // Disponibles d'abord.
             ->orderByDesc('is_available')
             ->orderBy('name')
@@ -90,6 +90,7 @@ class SearchController extends Controller
             'id' => $store->id,
             'name' => $store->name,
             'category' => $store->category?->name,
+            'category_icon' => $store->category?->icon,
             'neighborhood' => $store->neighborhood?->name,
             'logo' => $store->logo,
             'cover_image' => $store->cover_image,

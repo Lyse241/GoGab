@@ -29,8 +29,8 @@ class DeliveryRegistrationTest extends TestCase
         parent::setUp();
 
         Storage::fake('local');
-        $this->home = Neighborhood::create(['name' => 'Akanda', 'zone' => 'Nord']);
-        $this->base = Neighborhood::create(['name' => 'Louis', 'zone' => 'Centre']);
+        $this->home = Neighborhood::create(['name' => 'Akanda', 'zone' => 'Akanda']);
+        $this->base = Neighborhood::create(['name' => 'Louis', 'zone' => 'Libreville']);
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Store;
+use App\Services\CourierCoverage;
 use App\Services\StoreHours;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -46,8 +47,9 @@ class StoreController extends Controller
 
         $stores = Store::query()
             ->visible()
-            ->with(['category:id,name', 'neighborhood:id,name,zone', 'openingHours', 'owner:id,account_status'])
-            ->withCount('products')
+            ->with(['category:id,name,icon', 'neighborhood:id,name,zone', 'openingHours', 'owner:id,account_status'])
+            ->withCount(['products', 'reviews'])
+            ->withAvg('reviews', 'store_rating')
             ->when($category, fn (Builder $query) => $query->where('category_id', $category->id))
             ->when($q !== '', fn (Builder $query) => $query->where(fn (Builder $query) => $query
                 ->where('name', 'like', $like)
@@ -107,7 +109,8 @@ class StoreController extends Controller
 
         // Menu par section (ordre alphabétique, produits sans section en dernier). Les produits
         // indisponibles restent affichés (grisés, non commandables) : le client sait qu'ils existent.
-        $store->load(['category:id,name', 'neighborhood:id,name,zone', 'openingHours', 'products' => fn ($query) => $query
+        $store->loadCount('reviews')->loadAvg('reviews', 'store_rating');
+        $store->load(['category:id,name,icon', 'neighborhood:id,name,zone', 'openingHours', 'products' => fn ($query) => $query
             ->select(['id', 'store_id', 'menu_section', 'name', 'description', 'price', 'image', 'is_available'])
             ->orderByRaw('menu_section is null')
             ->orderBy('menu_section')
@@ -126,6 +129,8 @@ class StoreController extends Controller
                 'today' => StoreHours::now()->isoWeekday(),
             ],
             'products' => $store->products,
+            // Aucun livreur disponible dans le rayon de ce commerce : bandeau d'information (commande toujours possible).
+            'deliveryAvailable' => $store->isVisible() ? app(CourierCoverage::class)->hasCourierFor($store) : true,
         ]);
     }
 
@@ -164,7 +169,14 @@ class StoreController extends Controller
             'id' => $store->id,
             'name' => $store->name,
             'category' => $store->category->name,
+            // Icône de la catégorie : image de remplacement d'un commerce sans photo.
+            'category_icon' => $store->category->icon,
             'cover_image' => $store->cover_image,
+            // Moyenne des avis des clients (null tant qu'aucun avis).
+            'rating' => $store->getAttribute('reviews_avg_store_rating') !== null
+                ? round((float) $store->getAttribute('reviews_avg_store_rating'), 1)
+                : null,
+            'reviews_count' => (int) $store->getAttribute('reviews_count'),
             // Calculé côté serveur, à l'heure de Libreville.
             ...$store->openingStatus(),
         ];

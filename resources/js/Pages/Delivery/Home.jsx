@@ -1,3 +1,5 @@
+import InstallAppCard from '@/Components/Layout/InstallAppCard';
+import PushToggle from '@/Components/Layout/PushToggle';
 import Button from '@/Components/UI/Button';
 import Card from '@/Components/UI/Card';
 import StatusBadge from '@/Components/UI/StatusBadge';
@@ -34,19 +36,22 @@ export default function Home({ current, stats }) {
         <DeliveryLayout title={`Bonjour ${firstName}`} subtitle="Votre journée en un coup d’œil">
             <Head title="Espace livreur" />
 
+            <InstallAppCard />
+            <PushToggle className="rounded-2xl bg-white p-4 ring-1 ring-gray-100 shadow-card empty:hidden" />
+
             {/* Zone d'activité */}
             <Card padding="sm" className="flex items-center gap-3 px-4">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary-50 text-secondary">
                     <MapPin className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-gray-500">Zone d’activité</p>
+                    <p className="text-xs font-medium text-gray-500">Zone de couverture</p>
                     {courier?.zone ? (
                         <p className="truncate font-semibold text-secondary-900">
-                            Zone {courier.zone} <span className="font-normal text-gray-600">· base : {courier.base_neighborhood}</span>
+                            {courier.base_neighborhood} · rayon {courier.coverage_km} km
                         </p>
                     ) : (
-                        <p className="font-semibold text-danger-700">Aucun quartier de base</p>
+                        <p className="font-semibold text-danger-700">Aucun quartier de départ</p>
                     )}
                 </div>
                 <Link

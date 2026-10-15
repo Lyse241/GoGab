@@ -1,5 +1,6 @@
 import DocumentUploader from '@/Components/DocumentUploader';
 import FormErrors from '@/Components/FormErrors';
+import CoverageSelect from '@/Components/CoverageSelect';
 import NeighborhoodSelect from '@/Components/NeighborhoodSelect';
 import Button from '@/Components/UI/Button';
 import Input from '@/Components/UI/Input';
@@ -22,7 +23,7 @@ const STEPS = [
 // Champs de chaque étape : sert à revenir à la bonne étape quand le serveur signale une erreur.
 const STEP_FIELDS = [
     ['name', 'phone', 'email', 'password', 'password_confirmation', 'neighborhood_id', 'address_landmarks'],
-    ['vehicle_type', 'vehicle_brand', 'plate_number', 'license_number', 'base_neighborhood_id'],
+    ['vehicle_type', 'vehicle_brand', 'plate_number', 'license_number', 'base_neighborhood_id', 'coverage_km'],
 ];
 
 const VEHICLE_ICONS = { moto: Motorbike, bicycle: Bike, car: Car };
@@ -58,7 +59,7 @@ function validateStep(step, data, vehicle) {
             required('plate_number', 'Indiquez le numéro de plaque d’immatriculation.');
             required('license_number', 'Indiquez le numéro de votre permis de conduire.');
         }
-        required('base_neighborhood_id', 'Choisissez le quartier où vous comptez travailler.');
+        required('base_neighborhood_id', 'Choisissez votre quartier de départ.');
     }
 
     return errors;
@@ -82,6 +83,7 @@ export default function Delivery({ neighborhoods, vehicleTypes, documentTypes, r
         plate_number: '',
         license_number: '',
         base_neighborhood_id: preselected,
+        coverage_km: 10,
         documents: {},
     });
     const { data, setData, post, processing, progress, errors, setError, clearErrors, transform } = form;
@@ -227,7 +229,8 @@ export default function Delivery({ neighborhoods, vehicleTypes, documentTypes, r
                             </>
                         )}
 
-                        <NeighborhoodSelect id="base_neighborhood_id" label="Quartier de base (zone d’activité)" hint="Vous recevrez en priorité les courses des commerces de cette zone." neighborhoods={neighborhoods} value={data.base_neighborhood_id} onChange={(e) => update('base_neighborhood_id', e.target.value)} error={errors.base_neighborhood_id} required />
+                        <NeighborhoodSelect id="base_neighborhood_id" label="Quartier de départ" hint="Le point autour duquel vous recevez les courses." neighborhoods={neighborhoods} value={data.base_neighborhood_id} onChange={(e) => update('base_neighborhood_id', e.target.value)} error={errors.base_neighborhood_id} required />
+                        <CoverageSelect id="coverage_km" value={data.coverage_km} onChange={(km) => update('coverage_km', km)} error={errors.coverage_km} neighborhood={neighborhoods.find((n) => String(n.id) === String(data.base_neighborhood_id))?.name} />
                     </fieldset>
                 )}
 

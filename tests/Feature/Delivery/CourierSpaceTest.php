@@ -61,7 +61,7 @@ class CourierSpaceTest extends TestCase
             ->get('/delivery')
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Delivery/Home')
-                ->where('courier', ['is_available' => true, 'base_neighborhood' => 'Glass', 'zone' => 'Centre']));
+                ->where('courier', ['is_available' => true, 'base_neighborhood' => 'Glass', 'zone' => 'Libreville', 'coverage_km' => 10]));
 
         // Prop réservée aux livreurs.
         $this->actingAs($this->client)->get('/')->assertInertia(fn (Assert $page) => $page->where('courier', null));
@@ -97,8 +97,8 @@ class CourierSpaceTest extends TestCase
 
     public function test_changing_the_base_neighborhood_changes_the_zone_and_the_offers(): void
     {
-        $this->makeOrder(OrderStatus::SearchingCourier); // commerce en zone Centre
-        $akanda = Neighborhood::firstWhere('name', 'Akanda'); // zone Nord
+        $this->makeOrder(OrderStatus::SearchingCourier); // commerce en zone Libreville
+        $akanda = Neighborhood::firstWhere('name', 'Akanda'); // zone Akanda
 
         $this->actingAs($this->courier)
             ->from('/delivery/profile')
@@ -109,10 +109,10 @@ class CourierSpaceTest extends TestCase
         $this->assertSame($akanda->id, $this->courier->deliveryProfile->fresh()->base_neighborhood_id);
         $this->actingAs($this->courier)
             ->get('/delivery')
-            ->assertInertia(fn (Assert $page) => $page->where('courier.zone', 'Nord')->where('courier.base_neighborhood', 'Akanda'));
+            ->assertInertia(fn (Assert $page) => $page->where('courier.zone', 'Akanda')->where('courier.base_neighborhood', 'Akanda'));
         $this->actingAs($this->courier)
             ->get('/delivery/offers')
-            ->assertInertia(fn (Assert $page) => $page->where('zone', 'Nord')->has('offers', 0));
+            ->assertInertia(fn (Assert $page) => $page->where('zone', 'Akanda')->has('offers', 0));
 
         $this->actingAs($this->courier)
             ->patch('/delivery/profile/base-neighborhood', ['base_neighborhood_id' => 9999])

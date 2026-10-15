@@ -32,6 +32,8 @@ class Store extends Model
         'address_landmarks',
         'logo',
         'cover_image',
+        'latitude',
+        'longitude',
         'is_open',
         'is_active',
     ];
@@ -180,5 +182,10 @@ class Store extends Model
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
     }
 }

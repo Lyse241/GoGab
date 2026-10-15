@@ -18,6 +18,7 @@ Route::middleware('guest')->group(function () {
     Route::get('register/client', [RegisteredUserController::class, 'createClient'])
         ->name('register.client');
     Route::post('register/client', [RegisteredUserController::class, 'storeClient'])
+        ->middleware('throttle:10,1')
         ->name('register.client.store');
     Route::get('register/delivery', [RegisteredUserController::class, 'createDelivery'])
         ->name('register.delivery');
@@ -44,13 +45,16 @@ Route::middleware('guest')->group(function () {
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
 
+    // Limité : sans cela, n'importe qui pourrait inonder une boîte mail de messages de réinitialisation.
     Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
+        ->middleware('throttle:6,1')
         ->name('password.email');
 
     Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
         ->name('password.reset');
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])
+        ->middleware('throttle:10,1')
         ->name('password.store');
 });
 

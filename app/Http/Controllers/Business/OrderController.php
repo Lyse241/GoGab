@@ -9,6 +9,7 @@ use App\Models\OrderStatusHistory;
 use App\Models\Store;
 use App\Services\OrderWorkflow;
 use App\Services\ReportService;
+use App\Services\TrackingService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -93,6 +94,8 @@ class OrderController extends Controller
             ],
             // « Signaler un problème » : le client ou le livreur de cette commande.
             'reporting' => $reports->formFor($order, $request->user()),
+            // Approche du livreur vers la boutique (jusqu'au retrait seulement : jamais l'adresse du client).
+            'tracking' => app(TrackingService::class)->forOrder($order, $request->user()),
         ]);
     }
 

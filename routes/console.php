@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 // Tâches planifiées : lancer `php artisan schedule:run` chaque minute (cron) ou `php artisan schedule:work` en local.
 Schedule::command('gogab:unblock-expired')->everyMinute()->withoutOverlapping();
+Schedule::command('gogab:widen-announcements')->everyMinute()->withoutOverlapping();

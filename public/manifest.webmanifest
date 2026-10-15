@@ -1,0 +1,20 @@
+{
+    "name": "Gogab",
+    "short_name": "Gogab",
+    "description": "Commandez auprès des commerces de Libreville, livrés par des livreurs de votre quartier.",
+    "lang": "fr",
+    "dir": "ltr",
+    "id": "/",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#ffffff",
+    "theme_color": "#1E3A8A",
+    "categories": ["food", "shopping"],
+    "icons": [
+        { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+        { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+        { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    ]
+}

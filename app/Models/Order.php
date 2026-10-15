@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
@@ -32,6 +33,8 @@ class Order extends Model
         'address_landmarks',
         'subtotal',
         'delivery_fee',
+        'discount',
+        'promo_code',
         'total_price',
         'payment_method',
         'cash_given',
@@ -40,7 +43,9 @@ class Order extends Model
         'status',
         'announced_at',
         'announcement_count',
+        'widened_at',
         'cash_collected_at',
+        'courier_arrived_at',
     ];
 
     /**
@@ -53,14 +58,32 @@ class Order extends Model
         return [
             'subtotal' => 'decimal:2',
             'delivery_fee' => 'decimal:2',
+            'discount' => 'decimal:2',
             'total_price' => 'decimal:2',
             'cash_given' => 'decimal:2',
             'payment_method' => PaymentMethod::class,
             'status' => OrderStatus::class,
             'announced_at' => 'datetime',
             'announcement_count' => 'integer',
+            'widened_at' => 'datetime',
             'cash_collected_at' => 'datetime',
+            'courier_arrived_at' => 'datetime',
         ];
+    }
+
+    /**
+     * L'annonce est-elle élargie à tous les livreurs du Grand Libreville ? Vrai quand la commande est
+     * en recherche de livreur, sans livreur, depuis plus de `gogab.coverage.widen_after_minutes`.
+     */
+    public function isWidened(): bool
+    {
+        if ($this->status !== OrderStatus::SearchingCourier || $this->delivery_id !== null) {
+            return false;
+        }
+
+        $since = $this->announced_at ?? $this->updated_at;
+
+        return $since !== null && $since->lte(now()->subMinutes((int) config('gogab.coverage.widen_after_minutes')));
     }
 
     /**
@@ -146,6 +169,11 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function review(): HasOne
+    {
+        return $this->hasOne(Review::class);
     }
 
     public function statusHistories(): HasMany

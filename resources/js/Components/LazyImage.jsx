@@ -2,13 +2,17 @@ import { useState } from 'react';
 
 /**
  * Image avec squelette animé tant qu'elle charge (connexions lentes),
- * et fond neutre si elle ne peut pas être chargée.
+ * et fond neutre (ou `fallback`, un élément à afficher à sa place) si elle ne peut pas être chargée.
  */
-export default function LazyImage({ src, alt = '', className = '' }) {
+export default function LazyImage({ src, alt = '', className = '', fallback = null }) {
     const [status, setStatus] = useState('loading');
 
     if (!src || status === 'error') {
-        return <div className={`bg-gray-200 ${className}`} aria-hidden={!alt} />;
+        return fallback ? (
+            <div className={`relative overflow-hidden ${className}`}>{fallback}</div>
+        ) : (
+            <div className={`bg-gray-200 ${className}`} aria-hidden={!alt} />
+        );
     }
 
     return (

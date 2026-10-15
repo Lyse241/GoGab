@@ -36,7 +36,7 @@ class OrderTest extends TestCase
         parent::setUp();
 
         config(['gogab.delivery_fee' => 1000]);
-        $this->neighborhood = Neighborhood::create(['name' => 'Glass', 'zone' => 'Centre']);
+        $this->neighborhood = Neighborhood::create(['name' => 'Glass', 'zone' => 'Libreville']);
         $this->client = User::factory()->create([
             'role' => 'client',
             'neighborhood_id' => $this->neighborhood->id,

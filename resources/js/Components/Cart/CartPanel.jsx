@@ -21,7 +21,7 @@ function CartLine({ item, unavailable, onQuantityChange, onRemove }) {
     return (
         <li className="flex gap-3 py-3">
             <LazyImage
-                src={imageUrl(item.image)}
+                src={imageUrl(item.image, 'sm')}
                 alt=""
                 className={cn('h-16 w-16 shrink-0 rounded-xl', unavailable && 'opacity-50 grayscale')}
             />

@@ -188,7 +188,7 @@ class ProductCatalogTest extends TestCase
         $order = Order::create([
             'store_id' => $this->store->id,
             'client_id' => User::factory()->create()->id,
-            'neighborhood_id' => Neighborhood::create(['name' => 'Louis', 'zone' => 'Centre'])->id,
+            'neighborhood_id' => Neighborhood::create(['name' => 'Louis', 'zone' => 'Libreville'])->id,
             'address_landmarks' => 'Près du marché',
             'subtotal' => 6500,
             'total_price' => 6500,

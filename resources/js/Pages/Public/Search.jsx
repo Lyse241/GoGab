@@ -1,7 +1,7 @@
 import SearchBar from '@/Components/Layout/SearchBar';
 import { SkeletonCard } from '@/Components/UI/Skeleton';
 import useListLoading from '@/Hooks/useListLoading';
-import LazyImage from '@/Components/LazyImage';
+import StoreCover from '@/Components/StoreCover';
 import OpeningStatusBadge from '@/Components/OpeningStatusBadge';
 import ProductCard from '@/Components/ProductCard';
 import Button from '@/Components/UI/Button';
@@ -33,10 +33,10 @@ function StoreResult({ store }) {
             href={route('stores.show', store.id)}
             className={cn(
                 'flex items-center gap-3 rounded-2xl bg-white p-3 shadow-card ring-1 ring-gray-100 transition hover:shadow-card-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                closed && 'opacity-75',
+                closed && 'bg-gray-50',
             )}
         >
-            <LazyImage src={imageUrl(store.cover_image)} alt="" className={cn('h-16 w-20 shrink-0 rounded-xl', closed && 'grayscale')} />
+            <StoreCover store={store} size="sm" className={cn('h-16 w-20 shrink-0 rounded-xl', closed && 'grayscale')} />
             <span className="min-w-0 flex-1">
                 <span className="block truncate font-semibold text-secondary-900">{store.name}</span>
                 <span className="block truncate text-sm text-gray-500">

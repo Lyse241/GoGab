@@ -30,7 +30,7 @@ class BusinessRegistrationTest extends TestCase
 
         Storage::fake('local');
         Storage::fake('public');
-        $this->neighborhood = Neighborhood::create(['name' => 'Nombakélé', 'zone' => 'Centre']);
+        $this->neighborhood = Neighborhood::create(['name' => 'Nombakélé', 'zone' => 'Libreville']);
         $this->category = Category::create(['name' => 'Restaurant', 'slug' => 'restaurant']);
     }
 

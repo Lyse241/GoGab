@@ -10,6 +10,7 @@ use App\Models\Neighborhood;
 use App\Models\Order;
 use App\Models\Report;
 use App\Models\User;
+use App\Services\CourierCoverage;
 use App\Services\CourierProfileService;
 use App\Services\ModerationService;
 use Illuminate\Database\Eloquent\Builder;
@@ -64,6 +65,8 @@ class HandleInertiaRequests extends Middleware
                 // Badge de la cloche dès l'affichage (ensuite rafraîchi par /notifications/unread).
                 'unread_notifications' => fn () => $request->user()?->unreadNotifications()->count(),
             ],
+            // Clé publique VAPID : null tant que les notifications push ne sont pas configurées.
+            'push' => ['public_key' => \App\Services\PushService::isConfigured() ? config('gogab.push.public_key') : null],
             // Affichés en toasts par le ToastProvider React.
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
@@ -93,6 +96,7 @@ class HandleInertiaRequests extends Middleware
                 'is_available' => $user->deliveryProfile->is_available,
                 'base_neighborhood' => $user->deliveryProfile->baseNeighborhood?->name,
                 'zone' => $user->deliveryProfile->baseNeighborhood?->zone,
+                'coverage_km' => $user->deliveryProfile->coverage_km,
             ] : null,
             // Sélecteur de quartier du header public.
             'neighborhoods' => fn () => Neighborhood::orderBy('name')->get(['id', 'name', 'zone']),
@@ -143,14 +147,9 @@ class HandleInertiaRequests extends Middleware
     private function courierBadges(User $user): array
     {
         $profile = $user->deliveryProfile?->loadMissing('baseNeighborhood');
-        $zone = $profile?->is_available ? $profile->baseNeighborhood?->zone : null;
 
         return [
-            'offers' => $zone ? Order::query()
-                ->where('status', OrderStatus::SearchingCourier)
-                ->whereNull('delivery_id')
-                ->whereHas('store.neighborhood', fn (Builder $query) => $query->where('zone', $zone))
-                ->count() : 0,
+            'offers' => $profile?->is_available ? app(CourierCoverage::class)->offersFor($user)->count() : 0,
             'active_orders' => $user->deliveries()->whereIn('status', CourierProfileService::ACTIVE_STATUSES)->count(),
         ];
     }

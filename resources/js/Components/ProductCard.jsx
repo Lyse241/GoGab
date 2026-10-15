@@ -58,7 +58,7 @@ export default function ProductCard({ product, canOrder, quantity = 0, onAdd, on
 
             <div className="relative shrink-0 self-start">
                 <LazyImage
-                    src={imageUrl(product.image)}
+                    src={imageUrl(product.image, 'sm')}
                     alt=""
                     className={cn('h-24 w-24 rounded-xl sm:h-28 sm:w-28', !available && 'opacity-50 grayscale')}
                 />

@@ -33,7 +33,7 @@ class AccountValidationTest extends TestCase
 
         Storage::fake('local');
         $this->admin = User::factory()->create(['role' => 'admin', 'name' => 'Admin Gogab']);
-        $this->neighborhood = Neighborhood::create(['name' => 'Louis', 'zone' => 'Centre']);
+        $this->neighborhood = Neighborhood::create(['name' => 'Louis', 'zone' => 'Libreville']);
     }
 
     /**

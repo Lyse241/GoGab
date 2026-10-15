@@ -126,7 +126,7 @@ function OfferCard({ offer, elapsed, disabled, busy, onAccept }) {
  * Acceptation avec confirmation ; si un autre livreur a été plus rapide, le serveur répond
  * « Cette course vient d'être prise » et la liste rechargée ne contient plus la carte.
  */
-export default function Offers({ offers, zone, isAvailable, busy }) {
+export default function Offers({ offers, zone, coverageKm, baseNeighborhood, isAvailable, busy }) {
     const toast = useToast();
     const notifications = useNotifications();
     const [confirming, setConfirming] = useState(null);
@@ -145,7 +145,7 @@ export default function Offers({ offers, zone, isAvailable, busy }) {
             return;
         }
 
-        toast.info(arrived.length > 1 ? `${arrived.length} nouvelles courses dans votre zone.` : `${arrived[0].store} → ${arrived[0].neighborhood} · gain ${formatFCFA(arrived[0].earning)}`, {
+        toast.info(arrived.length > 1 ? `${arrived.length} nouvelles courses dans votre commune.` : `${arrived[0].store} → ${arrived[0].neighborhood} · gain ${formatFCFA(arrived[0].earning)}`, {
             title: arrived.length > 1 ? 'Nouvelles offres !' : 'Nouvelle offre !',
         });
         notifications.refresh?.();
@@ -169,7 +169,7 @@ export default function Offers({ offers, zone, isAvailable, busy }) {
     };
 
     return (
-        <DeliveryLayout title="Offres" subtitle={zone ? `Courses autour de vous · zone ${zone}` : undefined}>
+        <DeliveryLayout title="Offres" subtitle={zone ? `Courses dans un rayon de ${coverageKm} km autour de ${baseNeighborhood}` : undefined}>
             <Head title="Offres de livraison" />
 
             {busy && (
@@ -190,8 +190,8 @@ export default function Offers({ offers, zone, isAvailable, busy }) {
                         !zone
                             ? 'Aucun quartier de base n’est rattaché à votre profil : choisissez-le dans votre profil.'
                             : !isAvailable
-                              ? 'Vous êtes indisponible : passez disponible pour recevoir les offres de votre zone.'
-                              : `Aucune course à prendre dans la zone ${zone} pour le moment. La liste se met à jour toute seule.`
+                              ? 'Vous êtes indisponible : passez disponible pour recevoir les offres de votre commune.'
+                              : `Aucune course à prendre dans un rayon de ${coverageKm} km pour le moment. La liste se met à jour toute seule.`
                     }
                     action={
                         !zone && (
